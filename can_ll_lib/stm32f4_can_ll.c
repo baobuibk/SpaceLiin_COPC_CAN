@@ -15,9 +15,7 @@
 CAN_TypeDef_t *canbase;
 
 // Static prototypes
-static ErrorStatus Trans0(CAN_TypeDef_t *canbase, const uint8_t data[], LL_CAN_TxHeaderTypeDef *htxheader);
-static ErrorStatus Trans1(CAN_TypeDef_t *canbase, const uint8_t data[], LL_CAN_TxHeaderTypeDef *htxheader);
-static ErrorStatus Trans2(CAN_TypeDef_t *canbase, const uint8_t data[], LL_CAN_TxHeaderTypeDef *htxheader);
+static ErrorStatus Trans(CAN_TypeDef_t *canbase, const uint8_t data[], LL_CAN_TxHeaderTypeDef *htxheader);
 
 /**
  * The function `LL_CAN_GPIO_Init` initializes GPIO pins for CAN communication based on the specified
@@ -232,7 +230,7 @@ ErrorStatus LL_CAN_Init(LL_CAN_TypeDef can_type, LL_CAN_InitTypeDef *hcan)
 ErrorStatus LL_CAN_ConfigFilter(LL_CAN_TypeDef can_type, LL_CAN_FilterTypeDef *hfilter)
 {
 	ErrorStatus status = ERROR;
-	// Check if can instance is hcan1 or hcan2
+	// Check CAN`s instance is CAN1 or CAN2
 	status = SUCCESS;
 	if (can_type == _CAN1)
 	{
@@ -244,6 +242,17 @@ ErrorStatus LL_CAN_ConfigFilter(LL_CAN_TypeDef can_type, LL_CAN_FilterTypeDef *h
 		canbase = _CAN2_REG_BASE;
 		status = SUCCESS;
 	}
+
+	// Check parameters
+	assert_param(hfilter->FilterActivation);
+	assert_param(hfilter->FilterBank);
+	assert_param(hfilter->FilterFIFOAssignment);
+	assert_param(hfilter->FilterID);
+	assert_param(hfilter->FilterMask);
+	assert_param(hfilter->FilterMode);
+	assert_param(hfilter->FilterScale);
+	assert_param(hfilter->SlaveStartFilterBank);
+
 	// Don`t have SlaveStartFilterBank configuration
 
 	// Init filter
@@ -321,34 +330,35 @@ ErrorStatus LL_CAN_Transmit(LL_CAN_TypeDef can_type, const uint8_t data[], LL_CA
 {
 	ErrorStatus status = ERROR;
 
+	// Check the parameters
 	assert_param(data);
 	assert_param(htxheader->_DLC);
 	assert_param(htxheader->_IDE);
 	assert_param(htxheader->_RTR);
+	assert_param(htxheader->TransmitGlobalTime);
 
-	// Check if can instance is hcan1 or hcan2
+	if (htxheader->_IDE == _CAN_ID_STD)
+	{
+		assert_param(htxheader->StdId);
+	}
+	else
+	{
+		assert_param(htxheader->ExtId);
+	}
+	// Check CAN`s instance is CAN1 or CAN2
 	if (can_type == _CAN1)
 	{
 		canbase = _CAN1_REG_BASE;
 	}
-	else if (can_type == _CAN2)
+	else
 	{
 		canbase = _CAN2_REG_BASE;
 	}
-	else
-		return status;
-	// Check which mailbox is empty
-	if ((canbase->CAN_TSR) & (0x01 << TME0))
+
+	// Check if any mailbox is empty
+	if (((canbase->CAN_TSR) & (0x01 << TME0)) || ((canbase->CAN_TSR) & (0x01 << TME1)) || ((canbase->CAN_TSR) & (0x01 << TME2)))
 	{
-		status = Trans0(canbase, data, htxheader);
-	}
-	else if ((canbase->CAN_TSR) & (0x01 << TME1))
-	{
-		status = Trans1(canbase, data, htxheader);
-	}
-	else if ((canbase->CAN_TSR) & (0x01 << TME2))
-	{
-		status = Trans2(canbase, data, htxheader);
+		status = Trans(canbase, data, htxheader);
 	}
 
 	return status;
@@ -372,140 +382,71 @@ ErrorStatus LL_CAN_Transmit(LL_CAN_TypeDef can_type, const uint8_t data[], LL_CA
  * LL_CAN_TxHeaderTypeDef *htxheader)` returns an `ErrorStatus` value, which is either `ERROR` or
  * `SUCCESS` based on the conditions checked within the function.
  */
-static ErrorStatus Trans0(CAN_TypeDef_t *canbase, const uint8_t data[], LL_CAN_TxHeaderTypeDef *htxheader)
+static ErrorStatus Trans(CAN_TypeDef_t *canbase, const uint8_t data[], LL_CAN_TxHeaderTypeDef *htxheader)
 {
 	ErrorStatus status = ERROR;
+	uint32_t transmitmailbox;
 
-	// Write ID to register
+	// Select an empty transmit mailbox
+	transmitmailbox = (((canbase->CAN_TSR) >> CODE) & 0x03);
+
+	// Set up the ID
 	if (htxheader->_IDE == _CAN_ID_STD)
 	{
-		(canbase->sTxMailBox[0].TIR) = ((htxheader->StdId) << 21) | ((htxheader->_RTR) << RTR);
+		(canbase->sTxMailBox[transmitmailbox].TIR) = ((htxheader->StdId) << STID) | ((htxheader->_RTR) << RTR);
 	}
 	else
 	{
-		(canbase->sTxMailBox[0].TIR) = (((htxheader->ExtId) << 3) | ((htxheader->_RTR) << RTR) | ((htxheader->_IDE) << IDE));
+		(canbase->sTxMailBox[transmitmailbox].TIR) = (((htxheader->ExtId) << EXID) | ((htxheader->_RTR) << RTR) | ((htxheader->_IDE) << IDE));
 	}
-	// Write DLC to register
-	(canbase->sTxMailBox[0].TDTR) |= ((htxheader->_DLC) << DLC);
 
-	// Config Message time stamp
+	// Set up the DLC
+	(canbase->sTxMailBox[transmitmailbox].TDTR) = ((htxheader->_DLC) << DLC);
 
-	// Write data to register
-
+	// Set up data
 	(canbase->sTxMailBox[0].TDHR) = (((uint32_t)data[7] << CAN_TDHR_DATA7_Pos) | ((uint32_t)data[6] << CAN_TDHR_DATA6_Pos) | ((uint32_t)data[5] << CAN_TDHR_DATA5_Pos) | ((uint32_t)data[4] << CAN_TDHR_DATA4_Pos));
-
 	(canbase->sTxMailBox[0].TDLR) = ((uint32_t)(data[3] << CAN_TDLR_DATA3_Pos) | ((uint32_t)data[2] << CAN_TDLR_DATA2_Pos) | ((uint32_t)data[1] << CAN_TDLR_DATA1_Pos) | ((uint32_t)data[0] << CAN_TDLR_DATA0_Pos));
-
-	//	for (uint8_t i = 0; i < htxheader->_DLC; i++)
-	//	{
-	//		if (i < 4)
-	//		{
-	//			canbase->sTxMailBox[0].TDLR |= ((uint32_t)data[i] << (8 * i));
-	//		}
-	//		else
-	//		{
-	//			canbase->sTxMailBox[0].TDHR |= ((uint32_t)data[i] << ((i - 4) * 8));
-	//		}
-	//	}
 
 	// Set up the Transmit Global Time mode
 	if (htxheader->TransmitGlobalTime == ENABLE)
 	{
-		canbase->sTxMailBox[0].TDTR |= ((htxheader->TransmitGlobalTime) << TGT);
+		canbase->sTxMailBox[transmitmailbox].TDTR |= ((htxheader->TransmitGlobalTime) << TGT);
 	}
 
-	// Check transmission error of mailbox and arbitration lost for mailbox
-	if ((canbase->CAN_TSR & (1UL << TERR0)) || (canbase->CAN_TSR & (1UL << ALST0)))
-	{
-		return ERROR;
-	}
+	//	// Check transmission error of mailbox and arbitration lost for mailbox
+	//	switch (transmitmailbox)
+	//	{
+	//	case 0:
+	//		if ((canbase->CAN_TSR & (1UL << TERR0)) || (canbase->CAN_TSR & (1UL << ALST0)))
+	//		{
+	//			return ERROR;
+	//		}
+	//		break;
+	//	case 1:
+	//		if ((canbase->CAN_TSR & (1UL << TERR1)) || (canbase->CAN_TSR & (1UL << ALST1)))
+	//		{
+	//			return ERROR;
+	//		}
+	//		break;
+	//	case 2:
+	//		if ((canbase->CAN_TSR & (1UL << TERR2)) || (canbase->CAN_TSR & (1UL << ALST2)))
+	//		{
+	//			return ERROR;
+	//		}
+	//		break;
+	//	}
 
 	// Request transmission by enable bit TXRQ
-	(canbase->sTxMailBox[0].TIR) |= (1UL << TXRQ);
+	(canbase->sTxMailBox[transmitmailbox].TIR) |= (1UL << TXRQ);
 
 	// Check pending transmission request on the selected Tx Mailboxes
-	if (!((canbase->CAN_TSR) & (1UL << TME0)))
+	while (1)
 	{
-		status = SUCCESS;
+		if (!((canbase->CAN_TSR) & ((1U << transmitmailbox) << TME0)))
+		{
+			status = SUCCESS;
+			break;
+		}
 	}
 	return status;
-}
-
-static ErrorStatus Trans1(CAN_TypeDef_t *canbase, const uint8_t data[], LL_CAN_TxHeaderTypeDef *htxheader)
-{
-	// Check ID is standard or extend
-	*((uint32_t *)canbase + CAN_TI1R) |= (htxheader->_IDE << IDE);
-
-	// Check Remote transmission request is data frame or remote frame
-	*((uint32_t *)canbase + CAN_TI1R) |= (htxheader->_RTR << RTR);
-
-	// Write ID to register
-	if (htxheader->_IDE == _CAN_ID_STD)
-		*((uint32_t *)canbase + CAN_TI1R) |= ((htxheader->StdId) << 21);
-	else if (htxheader->_IDE == _CAN_ID_EXT)
-		*((uint32_t *)canbase + CAN_TI1R) |= ((htxheader->ExtId) << 3);
-
-	// Write DLC to register
-	*((uint32_t *)canbase + CAN_TDT1R) |= ((htxheader->_DLC) << DLC);
-
-	// Config Message time stamp
-
-	// Config Transmit global time
-
-	// Write data to register
-	for (uint8_t i = 0; i < htxheader->_DLC; ++i)
-	{
-		if (i < 4)
-			*((uint32_t *)canbase + CAN_TDL1R) |= (data[i] << (8 * i));
-		else
-			*((uint32_t *)canbase + CAN_TDH1R) |= (data[i] << ((i - 4) * 8));
-	}
-
-	// Check transmission error of mailbox and arbitration lost for mailbox
-	if ((canbase->CAN_TSR & (1 << TERR1)) || (canbase->CAN_TSR & (1 << ALST1)))
-		return ERROR;
-
-	// Request transmission by enable bit TXRQ
-	*((uint32_t *)canbase + CAN_TI1R) |= (0x01 << TXRQ);
-
-	return SUCCESS;
-}
-static ErrorStatus Trans2(CAN_TypeDef_t *canbase, const uint8_t data[], LL_CAN_TxHeaderTypeDef *htxheader)
-{
-	// Check ID is standard or extend
-	*((uint32_t *)canbase + CAN_TI2R) |= (htxheader->_IDE << IDE);
-
-	// Check Remote transmission request is data frame or remote frame
-	*((uint32_t *)canbase + CAN_TI2R) |= (htxheader->_RTR << RTR);
-
-	// Write ID to register
-	if (htxheader->_IDE == _CAN_ID_STD)
-		*((uint32_t *)canbase + CAN_TI2R) |= ((htxheader->StdId) << 21);
-	else if (htxheader->_IDE == _CAN_ID_EXT)
-		*((uint32_t *)canbase + CAN_TI2R) |= ((htxheader->ExtId) << 3);
-
-	// Write DLC to register
-	*((uint32_t *)canbase + CAN_TDT2R) |= ((htxheader->_DLC) << DLC);
-
-	// Config Message time stamp
-
-	// Config Transmit global time
-
-	// Write data to register
-	for (uint8_t i = 0; i < htxheader->_DLC; ++i)
-	{
-		if (i < 4)
-			*((uint32_t *)canbase + CAN_TDL2R) |= (data[i] << (8 * i));
-		else
-			*((uint32_t *)canbase + CAN_TDH2R) |= (data[i] << ((i - 4) * 8));
-	}
-
-	// Check transmission error of mailbox and arbitration lost for mailbox
-	if ((canbase->CAN_TSR & (1 << TERR2)) || (canbase->CAN_TSR & (1 << ALST2)))
-		return ERROR;
-
-	// Request transmission by enable bit TXRQ
-	*((uint32_t *)canbase + CAN_TI2R) |= (0x01 << TXRQ);
-
-	return SUCCESS;
 }

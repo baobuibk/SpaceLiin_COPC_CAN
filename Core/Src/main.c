@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stm32f4_can_ll.h"
+#include <string.h>
 // #include "CAN_GPIO.h"
 /* USER CODE END Includes */
 
@@ -46,9 +47,8 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 LL_CAN_InitTypeDef hcan1;
 LL_CAN_TxHeaderTypeDef Txheader;
-uint8_t data[8]={10,50,100,200,125,45,34,81};
-uint8_t data1[2]={1,2};
-ErrorStatus status = ERROR;
+uint8_t data[8]={0x10,0x20,0x30,0x40,0x50,0x60,0x70,0x80};
+uint8_t data1[8]={1,2,3,4,5,6,7,8};
 char msg[50];
 /* USER CODE END PV */
 
@@ -121,29 +121,30 @@ int main(void)
   if(LL_CAN_Init(_CAN1, &hcan1)==ERROR)
   {
 	  sprintf(msg,"Can initialization fail\n");
-	  HAL_UART_Transmit(&huart2, (uint8_t*)msg, 50, 1000);
+	  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), 1000);
   }
   else
   {
 	  sprintf(msg,"CAN initialization successfully\n");
-	  HAL_UART_Transmit(&huart2, (uint8_t*)msg, 50, 1000);
+	  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), 1000);
   }
 
   if(LL_CAN_Start(_CAN1)== ERROR)
   {
 	  sprintf(msg,"Can start fail\n");
-	  HAL_UART_Transmit(&huart2, (uint8_t*)msg, 50, 1000);
+	  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), 1000);
   }
   else
   {
 	  sprintf(msg,"CAN start successfully\n");
-	  HAL_UART_Transmit(&huart2, (uint8_t*)msg, 50, 1000);
+	  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), 1000);
   }
-  Txheader.StdId = 0x345;
+  Txheader.StdId = 135;
   Txheader._DLC = 8;
   Txheader._RTR = _CAN_RTR_DATA;
   Txheader._IDE = _CAN_ID_STD;
-  Txheader.TransmitGlobalTime=DISABLE;
+  Txheader.TransmitGlobalTime = DISABLE;
+
 
   /* USER CODE END 2 */
 
@@ -154,7 +155,13 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  status = LL_CAN_Transmit(_CAN1, data, &Txheader);
+
+	  if(LL_CAN_Transmit(_CAN1, data1, &Txheader)==SUCCESS)
+	  {
+		  LL_GPIO_TogglePin(GPIOC, LL_GPIO_PIN_5);
+		  sprintf(msg,"Transmission fail\n");
+		  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), 1000);
+	  }
 	  Anti_WDG();
   }
   /* USER CODE END 3 */

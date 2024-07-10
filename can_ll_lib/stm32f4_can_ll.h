@@ -312,74 +312,74 @@ typedef struct
  * ------------------------------------*/
 
 // CAN_BTR register
-#define SILM 31
-#define LBKM 30
-#define SJW 24
-#define TS2 20
-#define TS1 16
-#define BRP 0
+#define SILM (31U)
+#define LBKM (30U)
+#define SJW (24U)
+#define TS2 (20U)
+#define TS1 (16U)
+#define BRP (0U)
 
 // CAN_MCR register
-#define DBF 16
-#define RESET 15
-#define TTCM 7
-#define ABOM 6
-#define AWUM 5
-#define NART 4
-#define RFLM 3
-#define TXFP 2
-#define SLEEP 1
-#define INRQ 0
+#define DBF (16U)
+#define RESET (15U)
+#define TTCM (7U)
+#define ABOM (6U)
+#define AWUM (5U)
+#define NART (4U)
+#define RFLM (3U)
+#define TXFP (2U)
+#define SLEEP (1U)
+#define INRQ (0U)
 
 // CAN_MSR register
-#define INAK 0
-#define SLAK 1
-#define ERRI 2
-#define WKUI 3
-#define SLAKI 4
-#define TXM 8
-#define RXM 9
-#define SAMP 10
-#define RX 11
+#define INAK (0U)
+#define SLAK (1U)
+#define ERRI (2U)
+#define WKUI (3U)
+#define SLAKI (4U)
+#define TXM (8U)
+#define RXM (9U)
+#define SAMP (10)
+#define RX (11U)
 // CAN_FMR register
-#define CAN2SB 8
-#define FINIT 0
+#define CAN2SB (8U)
+#define FINIT (0U)
 
 // CAN_TSR register
-#define LOW2 31
-#define LOW1 30
-#define LOW0 29
-#define TME2 28
-#define TME1 27
-#define TME0 26
-#define CODE 24
-#define ABRQ2 23
-#define TERR2 19
-#define ALST2 18
-#define TXOK2 17
-#define RQCP2 16
-#define ABRQ1 15
-#define TERR1 11
-#define ALST1 10
-#define TXOK1 9
-#define RQCP1 8
-#define ABRQ0 7
-#define TERR0 3
-#define ALST0 2
-#define TXOK0 1
-#define RQCP0 0
+#define LOW2 (31U)
+#define LOW1 (30U)
+#define LOW0 (29U)
+#define TME2 (28U)
+#define TME1 (9U)
+#define TME0 (26U)
+#define CODE (24U)
+#define ABRQ2 (23U)
+#define TERR2 (19U)
+#define ALST2 (18U)
+#define TXOK2 (17U)
+#define RQCP2 (16U)
+#define ABRQ1 (15U)
+#define TERR1 (11U)
+#define ALST1 (10U)
+#define TXOK1 (9U)
+#define RQCP1 (8U)
+#define ABRQ0 (7U)
+#define TERR0 (3U)
+#define ALST0 (2U)
+#define TXOK0 (1U)
+#define RQCP0 (0U)
 
-// CAN_TIxR register
-#define STID 21
-#define EXID 3
-#define IDE 2
-#define RTR 1
-#define TXRQ 0
+// CAN_TIR register
+#define STID (21U)
+#define EXID (3U)
+#define IDE (2U)
+#define RTR (1U)
+#define TXRQ (0U)
 
 // CAN_TDTxR register
-#define TIME 16
-#define TGT 8
-#define DLC 0
+#define TIME (16U)
+#define TGT (8U)
+#define DLC (0U)
 
 /** @defgroup CAN_operating_mode CAN Operating Mode*/
 
@@ -407,7 +407,7 @@ typedef struct
 ErrorStatus LL_CAN_GPIO_Init(uint8_t can_type);
 ErrorStatus LL_CAN_Init(LL_CAN_TypeDef can_type, LL_CAN_InitTypeDef *hcan);
 ErrorStatus LL_CAN_ConfigFilter(LL_CAN_TypeDef can_type, LL_CAN_FilterTypeDef *hfilter);
-ErrorStatus LL_CAN_Transmit(LL_CAN_TypeDef can_type,  const uint8_t data[], LL_CAN_TxHeaderTypeDef *htxheader);
+ErrorStatus LL_CAN_Transmit(LL_CAN_TypeDef can_type, const uint8_t data[], LL_CAN_TxHeaderTypeDef *htxheader);
 ErrorStatus LL_CAN_Start(LL_CAN_TypeDef can_type);
 
 #endif /* STM32F4_CAN_LL_H_ */
