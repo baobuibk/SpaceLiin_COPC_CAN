@@ -45,10 +45,11 @@
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-LL_CAN_InitTypeDef hcan1;
-LL_CAN_TxHeaderTypeDef Txheader;
-uint8_t data[8]={0x10,0x20,0x30,0x40,0x50,0x60,0x70,0x80};
-uint8_t data1[8]={1,2,3,4,5,6,7,8};
+LL_CAN_InitTypeDef_t hcan1;
+LL_CAN_FilterTypeDef_t hfilter1;
+LL_CAN_TxHeaderTypeDef_t Txheader;
+uint8_t data[8] = {0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80};
+uint8_t data1[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 char msg[50];
 /* USER CODE END PV */
 
@@ -66,9 +67,9 @@ void Anti_WDG();
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
+ * @brief  The application entry point.
+ * @retval int
+ */
 int main(void)
 {
 
@@ -97,19 +98,28 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   LL_GPIO_SetOutputPin(GPIOC, LL_GPIO_PIN_5);
-  if(LL_CAN_GPIO_Init(_CAN1) == ERROR)
-	  {
-	  sprintf(msg,"GPIO initialization fail\n");
-	  HAL_UART_Transmit(&huart2, (uint8_t*)msg, 50, 1000);
-	  }
+
+  if (LL_CAN_GPIO_Init(_CAN1) == ERROR)
+  {
+    sprintf(msg, "GPIO initialization fail\n");
+    HAL_UART_Transmit(&huart2, (uint8_t *)msg, 50, 1000);
+  }
   else
   {
-	  sprintf(msg,"GPIO initialization successfully\n");
-	  HAL_UART_Transmit(&huart2,(uint8_t*)msg, 50, 1000);
+    sprintf(msg, "GPIO initialization successfully\n");
+    HAL_UART_Transmit(&huart2, (uint8_t *)msg, 50, 1000);
   }
 
+  // Config NVIC
+  NVIC_SetPriority(CAN1_RX0_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 0));
+  NVIC_EnableIRQ(CAN1_RX0_IRQn);
 
-  hcan1.Baudrate = _BAUDRATE_1000;
+  // Set flag to
+
+  hcan1.Prescaler = 2;
+  hcan1.SyncJumpWidth = _CAN_SJW_1TQ;
+  hcan1.TimeSeg1 = _CAN_BS1_10TQ;
+  hcan1.TimeSeg2 = _CAN_BS2_1TQ;
   hcan1.Mode = _NORMAL_MODE;
   hcan1.status.AutoBusOff = DISABLE;
   hcan1.status.AutoRetransmission = ENABLE;
@@ -118,33 +128,46 @@ int main(void)
   hcan1.status.TimeTriggeredMode = DISABLE;
   hcan1.status.TransmitFifoPriority = DISABLE;
 
-  if(LL_CAN_Init(_CAN1, &hcan1)==ERROR)
+  if (LL_CAN_Init(_CAN1, &hcan1) == ERROR)
   {
-	  sprintf(msg,"Can initialization fail\n");
-	  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), 1000);
+    sprintf(msg, "Can initialization fail\n");
+    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
   }
   else
   {
-	  sprintf(msg,"CAN initialization successfully\n");
-	  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), 1000);
+    sprintf(msg, "CAN initialization successfully\n");
+    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
   }
 
-  if(LL_CAN_Start(_CAN1)== ERROR)
+  // Set up config filter
+  hfilter1.FilterActivation = _CAN_FILTER_ENABLE;
+  hfilter1.FilterBank = 0;
+  hfilter1.FilterFIFOAssignment = _CAN_FILTER_FIFO0;
+  hfilter1.FilterIdHigh = 0x00C0;
+  hfilter1.FilterIdLow = 0x0000;
+  hfilter1.FilterMaskIdHigh = 0x01C0;
+  hfilter1.FilterMaskIdLow = 0x0000;
+  hfilter1.FilterMode = _CAN_FILTERMODE_IDMASK;
+  hfilter1.FilterScale = _CAN_FILTERSCALE_32BIT;
+  LL_CAN_ConfigFilter(_CAN1, &hfilter1);
+
+  // Start Can
+  if (LL_CAN_Start(_CAN1) == ERROR)
   {
-	  sprintf(msg,"Can start fail\n");
-	  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), 1000);
+    sprintf(msg, "Can start fail\n");
+    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
   }
   else
   {
-	  sprintf(msg,"CAN start successfully\n");
-	  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), 1000);
+    sprintf(msg, "CAN start successfully\n");
+    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
   }
+
   Txheader.StdId = 135;
-  Txheader._DLC = 8;
+  Txheader._DLC = 4;
   Txheader._RTR = _CAN_RTR_DATA;
   Txheader._IDE = _CAN_ID_STD;
   Txheader.TransmitGlobalTime = DISABLE;
-
 
   /* USER CODE END 2 */
 
@@ -156,42 +179,40 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-	  if(LL_CAN_Transmit(_CAN1, data1, &Txheader)==SUCCESS)
-	  {
-		  LL_GPIO_TogglePin(GPIOC, LL_GPIO_PIN_5);
-		  sprintf(msg,"Transmission fail\n");
-		  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), 1000);
-	  }
-	  Anti_WDG();
+    if (LL_CAN_Transmit(_CAN1, data1, &Txheader) == SUCCESS)
+    {
+      LL_GPIO_TogglePin(GPIOC, LL_GPIO_PIN_5);
+      sprintf(msg, "Transmission fail\n");
+      HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
+    }
+    Anti_WDG();
   }
   /* USER CODE END 3 */
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+ * @brief System Clock Configuration
+ * @retval None
+ */
 void SystemClock_Config(void)
 {
   LL_FLASH_SetLatency(LL_FLASH_LATENCY_1);
-  while(LL_FLASH_GetLatency()!= LL_FLASH_LATENCY_1)
+  while (LL_FLASH_GetLatency() != LL_FLASH_LATENCY_1)
   {
   }
   LL_PWR_SetRegulVoltageScaling(LL_PWR_REGU_VOLTAGE_SCALE1);
   LL_RCC_HSE_Enable();
 
-   /* Wait till HSE is ready */
-  while(LL_RCC_HSE_IsReady() != 1)
+  /* Wait till HSE is ready */
+  while (LL_RCC_HSE_IsReady() != 1)
   {
-
   }
   LL_RCC_PLL_ConfigDomain_SYS(LL_RCC_PLLSOURCE_HSE, LL_RCC_PLLM_DIV_4, 192, LL_RCC_PLLP_DIV_4);
   LL_RCC_PLL_Enable();
 
-   /* Wait till PLL is ready */
-  while(LL_RCC_PLL_IsReady() != 1)
+  /* Wait till PLL is ready */
+  while (LL_RCC_PLL_IsReady() != 1)
   {
-
   }
   while (LL_PWR_IsActiveFlag_VOS() == 0)
   {
@@ -201,25 +222,24 @@ void SystemClock_Config(void)
   LL_RCC_SetAPB2Prescaler(LL_RCC_APB2_DIV_1);
   LL_RCC_SetSysClkSource(LL_RCC_SYS_CLKSOURCE_PLL);
 
-   /* Wait till System clock is ready */
-  while(LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_PLL)
+  /* Wait till System clock is ready */
+  while (LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_PLL)
   {
-
   }
   LL_SetSystemCoreClock(48000000);
 
-   /* Update the time base */
-  if (HAL_InitTick (TICK_INT_PRIORITY) != HAL_OK)
+  /* Update the time base */
+  if (HAL_InitTick(TICK_INT_PRIORITY) != HAL_OK)
   {
     Error_Handler();
   }
 }
 
 /**
-  * @brief USART2 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief USART2 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_USART2_UART_Init(void)
 {
 
@@ -245,19 +265,18 @@ static void MX_USART2_UART_Init(void)
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
-
 }
 
 /**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief GPIO Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_GPIO_Init(void)
 {
   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
-/* USER CODE BEGIN MX_GPIO_Init_1 */
-/* USER CODE END MX_GPIO_Init_1 */
+  /* USER CODE BEGIN MX_GPIO_Init_1 */
+  /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOH);
@@ -286,8 +305,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   LL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
 
-/* USER CODE BEGIN MX_GPIO_Init_2 */
-/* USER CODE END MX_GPIO_Init_2 */
+  /* USER CODE BEGIN MX_GPIO_Init_2 */
+  /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
@@ -296,14 +315,13 @@ void Anti_WDG()
   LL_GPIO_SetOutputPin(GPIOA, LL_GPIO_PIN_1);
   LL_mDelay(200);
   LL_GPIO_ResetOutputPin(GPIOA, LL_GPIO_PIN_1);
-
 }
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
@@ -315,14 +333,14 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */

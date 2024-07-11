@@ -23,19 +23,38 @@ typedef struct
   volatile uint32_t TDHR; /*!< CAN mailbox data high register */
 } LL_CAN_TxMailBox_TypeDef_t;
 
-/*CAN1 control and status registers*/
+/* Controller Area Network FilterRegister*/
 typedef struct
 {
-  volatile uint32_t CAN_MCR;                // CAN master control register
-  volatile uint32_t CAN_MSR;                // CAN master status register
-  volatile uint32_t CAN_TSR;                // CAN transmit status register
-  volatile uint32_t CAN_RF0R;               // CAN receive FIFO 0 register
-  volatile uint32_t CAN_RF1R;               // CAN receive FIFO 1 register
-  volatile uint32_t CAN_IER;                // CAN interrupt enable register (CAN_IER)
-  volatile uint32_t CAN_ESR;                // CAN error status register
-  volatile uint32_t CAN_BTR;                // CAN bit timing register
-  uint32_t CAN_RESERVED0[88];               // Reserved, 0x020 - 0x17F
-  LL_CAN_TxMailBox_TypeDef_t sTxMailBox[3]; //< CAN Tx MailBox, Address offset: 0x180 - 0x1AC */
+  volatile uint32_t FR1; /*!< CAN Filter bank register 1 */
+  volatile uint32_t FR2; /*!< CAN Filter bank register 1 */
+} CAN_FilterRegister_TypeDef_t;
+
+/*CAN control registers*/
+typedef struct
+{
+  volatile uint32_t CAN_MCR;                            // CAN master control register              Address offset: 0x00
+  volatile uint32_t CAN_MSR;                            // CAN master status register               Address offset: 0x04
+  volatile uint32_t CAN_TSR;                            // CAN transmit status register             Address offset: 0x08
+  volatile uint32_t CAN_RF0R;                           // CAN receive FIFO 0 register              Address offset: 0x0C
+  volatile uint32_t CAN_RF1R;                           // CAN receive FIFO 1 register              Address offset: 0x10
+  volatile uint32_t CAN_IER;                            // CAN interrupt enable register (CAN_IER)  Address offset: 0x14
+  volatile uint32_t CAN_ESR;                            // CAN error status register                Address offset: 0x18
+  volatile uint32_t CAN_BTR;                            // CAN bit timing register                  Address offset: 0x1C
+  uint32_t CAN_RESERVED0[88];                           // Reserved, 0x020 - 0x17F
+  LL_CAN_TxMailBox_TypeDef_t sTxMailBox[3];             // CAN Tx MailBox,                          Address offset: 0x180 - 0x1AC
+  CAN_FIFOMailBox_TypeDef sFIFOMailBox[2];              // CAN FIFO MailBox,                        Address offset: 0x1B0 - 0x1CC
+  uint32_t CAN_RESERVED1[12];                           // Reserved, 0x1D0 - 0x1FF
+  volatile uint32_t CAN_FMR;                            // CAN filter master register,              Address offset: 0x200
+  volatile uint32_t CAN_FM1R;                           // CAN filter mode register,                Address offset: 0x204
+  uint32_t CAN_RESERVED2;                               // Reserved, 0x208
+  volatile uint32_t CAN_FS1R;                           // CAN filter scale register,               Address offset: 0x20C
+  uint32_t CAN_RESERVED3;                               // Reserved, 0x210
+  volatile uint32_t CAN_FFA1R;                          // CAN filter FIFO assignment register,     Address offset: 0x214
+  uint32_t CAN_RESERVED4;                               // Reserved, 0x218
+  volatile uint32_t CAN_FA1R;                           // CAN filter activation register,          Address offset: 0x21C
+  uint32_t CAN_RESERVED5[8];                            // Reserved, 0x220-0x23F
+  CAN_FilterRegister_TypeDef_t CAN_sFilterRegister[28]; // CAN Filter Register,                     Address offset: 0x240-0x31C
 } CAN_TypeDef_t;
 
 // Data mask position
@@ -49,109 +68,13 @@ typedef struct
 #define CAN_TDHR_DATA7_Pos 24
 
 /* CAN base address*/
-
 #define _CAN1_REG_BASE ((CAN_TypeDef_t *)0x40006400UL)
 #define _CAN2_REG_BASE ((CAN_TypeDef_t *)0x40006800UL)
-
-/*CAN1 mailbox offset*/
-
-#define CAN_TI0R (0x180) // CAN TX0 mailbox identifier offset
-#define CAN_TI1R (0x190) // CAN TX1 mailbox identifier offset
-#define CAN_TI2R (0x1A0) // CAN TX2 mailbox identifier offset
-
-#define CAN_TDT0R (0x184) // CAN mailbox data length control and time stamp offset 0
-#define CAN_TDT1R (0x194) // CAN mailbox data length control and time stamp offset 1
-#define CAN_TDT2R (0x1A4) // CAN mailbox data length control and time stamp offset 2
-
-#define CAN_TDL0R (0x188) // CAN mailbox data low offset 0
-#define CAN_TDL1R (0x198) // CAN mailbox data low offset 1
-#define CAN_TDL2R (0x1A8) // CAN mailbox data low offset 2
-
-#define CAN_TDH0R (0x18C) // CAN mailbox data high offset 0
-#define CAN_TDH1R (0x19C) // CAN mailbox data high offset 1
-#define CAN_TDH2R (0x1AC) // CAN mailbox data high offset 2
-
-#define CAN_RI0R (0x1B0) // CAN receive FIFO mailbox identifier offset 0
-#define CAN_RI1R (0x1C0) // CAN receive FIFO mailbox identifier offset 1
-
-#define CAN_RDT0R (0x1B4) // CAN receive FIFO mailbox data length control and time stamp offset 0
-#define CAN_RDT1R (0x1C4) // CAN receive FIFO mailbox data length control and time stamp offset 1
-
-#define CAN_RDL0R (0x1B8) // CAN receive FIFO mailbox data low offset 0
-#define CAN_RDL1R (0x1C8) // CAN receive FIFO mailbox data low offset 1
-
-#define CAN_RDH0R (0x1BC) // CAN receive FIFO mailbox data high offset 0
-#define CAN_RDH1R (0x1CC) // CAN receive FIFO mailbox data high offset 1
-
-/*CAN1 filter offsets*/
-
-#define CAN_FMR (0x200)   // CAN filter master offset
-#define CAN_FM1R (0x204)  // CAN filter mode offset
-#define CAN_FS1R (0x20C)  // CAN filter scale offset
-#define CAN_FFA1R (0x214) // CAN filter FIFO assignment offset
-#define CAN_FA1R (0x21C)  // CAN filter activation offset
-
-// Filter banks
-#define CAN_F0R1 (0x240)
-#define CAN_F0R2 (0x244)
-#define CAN_F1R1 (0x248)
-#define CAN_F1R2 (0x24C)
-#define CAN_F2R1 (0x250)
-#define CAN_F2R2 (0x254)
-#define CAN_F3R1 (0x258)
-#define CAN_F3R2 (0x25C)
-#define CAN_F4R1 (0x260)
-#define CAN_F4R2 (0x264)
-#define CAN_F5R1 (0x268)
-#define CAN_F5R2 (0x26C)
-#define CAN_F6R1 (0x270)
-#define CAN_F6R2 (0x274)
-#define CAN_F7R1 (0x278)
-#define CAN_F7R2 (0x27C)
-#define CAN_F8R1 (0x280)
-#define CAN_F8R2 (0x284)
-#define CAN_F9R1 (0x288)
-#define CAN_F9R2 (0x28C)
-#define CAN_F10R1 (0x290)
-#define CAN_F10R2 (0x294)
-#define CAN_F11R1 (0x298)
-#define CAN_F11R2 (0x29C)
-#define CAN_F12R1 (0x2A0)
-#define CAN_F12R2 (0x2A4)
-#define CAN_F13R1 (0x2A8)
-#define CAN_F13R2 (0x2AC)
-#define CAN_F14R1 (0x2B0)
-#define CAN_F14R2 (0x2B4)
-#define CAN_F15R1 (0x2B8)
-#define CAN_F15R2 (0x2BC)
-#define CAN_F16R1 (0x2C0)
-#define CAN_F16R2 (0x2C4)
-#define CAN_F17R1 (0x2C8)
-#define CAN_F17R2 (0x2CC)
-#define CAN_F18R1 (0x2D0)
-#define CAN_F18R2 (0x2D4)
-#define CAN_F19R1 (0x2D8)
-#define CAN_F19R2 (0x2DC)
-#define CAN_F20R1 (0x2E0)
-#define CAN_F20R2 (0x2E4)
-#define CAN_F21R1 (0x2E8)
-#define CAN_F21R2 (0x2EC)
-#define CAN_F22R1 (0x2F0)
-#define CAN_F22R2 (0x2F4)
-#define CAN_F23R1 (0x2F8)
-#define CAN_F23R2 (0x2FC)
-#define CAN_F24R1 (0x300)
-#define CAN_F24R2 (0x304)
-#define CAN_F25R1 (0x308)
-#define CAN_F25R2 (0x30C)
-#define CAN_F26R1 (0x310)
-#define CAN_F26R2 (0x314)
-#define CAN_F27R1 (0x318)
-#define CAN_F27R2 (0x31C)
 
 #define DISABLE 0
 #define ENABLE 1
 
+/*CAN function state structure definition*/
 typedef struct
 {
   uint8_t TimeTriggeredMode : 1; /*!< Enable or disable the time triggered communication mode.
@@ -173,14 +96,7 @@ typedef struct
                                             This parameter can be set to ENABLE or DISABLE. */
 } __attribute__((packed)) FunctionalState_t;
 
-typedef enum
-{
-  _BAUDRATE_500,
-  _BAUDRATE_800,
-  _BAUDRATE_1000,
-
-} LL_BaudrateTypeDef;
-
+/*CAN MODE structure definition*/
 typedef enum
 {
   _NORMAL_MODE,
@@ -190,42 +106,63 @@ typedef enum
 
 } LL_CAN_MODE_t;
 
-/**
- * @brief  LL CAN init structure definition
- */
+/*CAN init structure definition*/
 typedef struct
 {
-  LL_BaudrateTypeDef Baudrate; /* Specifies baudrate: 500, 800 or 1000*/
-  LL_CAN_MODE_t Mode;          /* Specifies can mode: normal, loopback, silent or silent loopback*/
-  FunctionalState_t status;    /* status of function for can */
+  uint32_t Prescaler; /*!< Specifies the length of a time quantum.
+                         This parameter must be a number between Min_Data = 1 and Max_Data = 1024. */
 
-} LL_CAN_InitTypeDef;
+  uint32_t SyncJumpWidth; /*!< Specifies the maximum number of time quanta the CAN hardware
+                             is allowed to lengthen or shorten a bit to perform resynchronization.
+                             This parameter can be a value of @ref _CAN_synchronisation_jump_width */
 
-/**
- * @brief  LL CAN init structure definition
- */
+  uint32_t TimeSeg1; /*!< Specifies the number of time quanta in Bit Segment 1.
+                          This parameter can be a value of @ref _CAN_time_quantum_in_bit_segment_1 */
+
+  uint32_t TimeSeg2; /*!< Specifies the number of time quanta in Bit Segment 2.
+                          This parameter can be a value of @ref _CAN_time_quantum_in_bit_segment_2 */
+
+  LL_CAN_MODE_t Mode; /* Specifies can mode: normal, loopback, silent or silent loopback*/
+
+  FunctionalState_t status; /* status of function for can */
+
+} LL_CAN_InitTypeDef_t;
+
+/*CAN init structure definition*/
 typedef enum
 {
   _CAN1,
   _CAN2
-} LL_CAN_TypeDef;
+} LL_CAN_TypeDef_t;
 
-/**
- * @brief  LL CAN filter configuration structure definition
- */
+/*CAN filter configuration structure definition*/
 typedef struct
 {
 
-  uint32_t FilterID; /*!< Specifies the filter identification number.
-                                This parameter must be a number between
-                                Min_Data = 0x0000 and Max_Data = 0xFFFF	*/
+  uint32_t FilterIdHigh; /*!< Specifies the filter identification number (MSBs for a 32-bit
+                          configuration, first one for a 16-bit configuration).
+                          This parameter must be a number between
+                          Min_Data = 0x0000 and Max_Data = 0xFFFF. */
 
-  uint32_t FilterMask; /*!< Specifies the filter identification number.
-                                This parameter must be a number between
-                                Min_Data = 0x0000 and Max_Data = 0xFFFF	*/
+  uint32_t FilterIdLow; /*!< Specifies the filter identification number (LSBs for a 32-bit
+                             configuration, second one for a 16-bit configuration).
+                             This parameter must be a number between
+                             Min_Data = 0x0000 and Max_Data = 0xFFFF. */
+
+  uint32_t FilterMaskIdHigh; /*!< Specifies the filter mask number or identification number,
+                                  according to the mode (MSBs for a 32-bit configuration,
+                                  first one for a 16-bit configuration).
+                                  This parameter must be a number between
+                                  Min_Data = 0x0000 and Max_Data = 0xFFFF. */
+
+  uint32_t FilterMaskIdLow; /*!< Specifies the filter mask number or identification number,
+                                 according to the mode (LSBs for a 32-bit configuration,
+                                 second one for a 16-bit configuration).
+                                 This parameter must be a number between
+                                 Min_Data = 0x0000 and Max_Data = 0xFFFF. */
 
   uint32_t FilterFIFOAssignment; /*!< Specifies the FIFO (0 or 1U) which will be assigned to the filter.
-                                      This parameter can be a value of @ref CAN_filter_FIFO */
+                                      This parameter can be a value of @ref _CAN_filter_FIFO */
 
   uint32_t FilterBank; /*!< Specifies the filter bank which will be initialized.
                             For single CAN instance(14 dedicated filter banks),
@@ -234,13 +171,13 @@ typedef struct
                             this parameter must be a number between Min_Data = 0 and Max_Data = 27. */
 
   uint32_t FilterMode; /*!< Specifies the filter mode to be initialized.
-                            This parameter can be a value of @ref CAN_filter_mode */
+                            This parameter can be a value of @ref _CAN_filter_mode */
 
   uint32_t FilterScale; /*!< Specifies the filter scale.
-                             This parameter can be a value of @ref CAN_filter_scale */
+                             This parameter can be a value of @ref _CAN_filter_scale */
 
   uint32_t FilterActivation; /*!< Enable or disable the filter.
-                                  This parameter can be a value of @ref CAN_filter_activation */
+                                  This parameter can be a value of @ref _CAN_filter_activation */
 
   uint32_t SlaveStartFilterBank; /*!< Select the start filter bank for the slave CAN instance.
                                       For single CAN instances, this parameter is meaningless.
@@ -249,11 +186,9 @@ typedef struct
                                       CAN instance.
                                       This parameter must be a number between Min_Data = 0 and Max_Data = 27. */
 
-} LL_CAN_FilterTypeDef;
+} LL_CAN_FilterTypeDef_t;
 
-/**
- * @brief  LL CAN Tx message header structure definition
- */
+/*CAN Tx message header structure definition*/
 typedef struct
 {
   uint32_t StdId; /*!< Specifies the standard identifier.
@@ -263,10 +198,10 @@ typedef struct
                        This parameter must be a number between Min_Data = 0 and Max_Data = 0x1FFFFFFF. */
 
   uint32_t _IDE; /*!< Specifies the type of identifier for the message that will be transmitted.
-                     This parameter can be a value of @ref CAN_identifier_type */
+                     This parameter can be a value of @ref _CAN_identifier_type */
 
   uint32_t _RTR; /*!< Specifies the type of frame for the message that will be transmitted.
-                     This parameter can be a value of @ref CAN_remote_transmission_request */
+                     This parameter can be a value of @ref _CAN_remote_transmission_request */
 
   uint32_t _DLC; /*!< Specifies the length of the frame that will be transmitted.
                      This parameter must be a number between Min_Data = 0 and Max_Data = 8. */
@@ -277,11 +212,9 @@ typedef struct
                           @note: DLC must be programmed as 8 bytes, in order these 2 bytes are sent.
                           This parameter can be set to ENABLE or DISABLE. */
 
-} LL_CAN_TxHeaderTypeDef;
+} LL_CAN_TxHeaderTypeDef_t;
 
-/**
- * @brief  LL CAN Rx message header structure definition
- */
+/*CAN Rx message header structure definition*/
 typedef struct
 {
   uint32_t StdId; /*!< Specifies the standard identifier.
@@ -291,10 +224,10 @@ typedef struct
                        This parameter must be a number between Min_Data = 0 and Max_Data = 0x1FFFFFFF. */
 
   uint32_t _IDE; /*!< Specifies the type of identifier for the message that will be transmitted.
-                     This parameter can be a value of @ref CAN_identifier_type */
+                     This parameter can be a value of @ref _CAN_identifier_type */
 
   uint32_t _RTR; /*!< Specifies the type of frame for the message that will be transmitted.
-                     This parameter can be a value of @ref CAN_remote_transmission_request */
+                     This parameter can be a value of @ref _CAN_remote_transmission_request */
 
   uint32_t _DLC; /*!< Specifies the length of the frame that will be transmitted.
                      This parameter must be a number between Min_Data = 0 and Max_Data = 8. */
@@ -306,12 +239,12 @@ typedef struct
   uint32_t FilterMatchIndex; /*!< Specifies the index of matching acceptance filter element.
                           This parameter must be a number between Min_Data = 0 and Max_Data = 0xFF. */
 
-} LL_CAN_RxHeaderTypeDef;
+} LL_CAN_RxHeaderTypeDef_t;
 
-/* Define register bit
- * ------------------------------------*/
+/**---------------------------------Define bit position of can register-------------------------------------------------**/
+//
 
-// CAN_BTR register
+// Bit position of CAN_BTR register
 #define SILM (31U)
 #define LBKM (30U)
 #define SJW (24U)
@@ -319,7 +252,7 @@ typedef struct
 #define TS1 (16U)
 #define BRP (0U)
 
-// CAN_MCR register
+// Bit position of CAN_MCR register
 #define DBF (16U)
 #define RESET (15U)
 #define TTCM (7U)
@@ -331,7 +264,7 @@ typedef struct
 #define SLEEP (1U)
 #define INRQ (0U)
 
-// CAN_MSR register
+// Bit position of CAN_MSR register
 #define INAK (0U)
 #define SLAK (1U)
 #define ERRI (2U)
@@ -341,11 +274,12 @@ typedef struct
 #define RXM (9U)
 #define SAMP (10)
 #define RX (11U)
-// CAN_FMR register
+
+// Bit position of CAN_FMR register
 #define CAN2SB (8U)
 #define FINIT (0U)
 
-// CAN_TSR register
+// Bit position of CAN_TSR register
 #define LOW2 (31U)
 #define LOW1 (30U)
 #define LOW0 (29U)
@@ -369,45 +303,104 @@ typedef struct
 #define TXOK0 (1U)
 #define RQCP0 (0U)
 
-// CAN_TIR register
+// Bit position of CAN_TIR register
 #define STID (21U)
 #define EXID (3U)
 #define IDE (2U)
 #define RTR (1U)
 #define TXRQ (0U)
 
-// CAN_TDTxR register
+// Bit position of CAN_TDTxR register
 #define TIME (16U)
 #define TGT (8U)
 #define DLC (0U)
 
-/** @defgroup CAN_operating_mode CAN Operating Mode*/
+// Bit position of CAN_IER register
+#define TMEIE (0U)
+#define FMPIE0 (1U)
+#define FFIE0 (2U)
+#define FOVIE0 (3U)
+#define FMPIE1 (4U)
+#define FFIE1 (5U)
+#define FOVIE1 (6U)
+#define EWGIE (8U)
+#define EPVIE (9U)
+#define BOFIE (10U)
+#define LECIE (11U)
+#define ERRIE (15U)
+#define WKUIE (16U)
+#define SLKIE (17U)
 
+/**---------------------------------@defgroup-------------------------------------------------**/
+/*@defgroup _CAN_operating_mode */
 #define _CAN_MODE_NORMAL ((0 << SILM) | (0 << LBKM))          /*!< Normal mode   */
 #define _CAN_MODE_LOOPBACK ((0 << SILM) | (1 << LBKM))        /*!< Loopback mode */
 #define _CAN_MODE_SILENT ((1 << SILM) | (0 << LBKM))          /*!< Silent mode   */
 #define _CAN_MODE_SILENT_LOOPBACK ((1 << SILM) | (1 << LBKM)) /*!< Loopback combined with silent mode   */
 
-/** @defgroup CAN_identifier_type CAN Identifier Type
- * @{
- */
+/*@defgroup _CAN_identifier_type */
 #define _CAN_ID_STD (0UL) /*!< Standard Id */
 #define _CAN_ID_EXT (1UL) /*!< Extended Id */
-/**
- * @}
- */
 
-/** @defgroup CAN_remote_transmission_request CAN Remote Transmission Request
- * @{
- */
+/*@defgroup _CAN_remote_transmission_request*/
 #define _CAN_RTR_DATA (0UL)   /*!< Data frame   */
 #define _CAN_RTR_REMOTE (1UL) /*!< Remote frame */
 
-/*Prototype functions*/
+/*@defgroup _CAN_filter_FIFO*/
+#define _CAN_FILTER_FIFO0 (0U) /*!< Filter FIFO 0 assignment for filter x */
+#define _CAN_FILTER_FIFO1 (1U) /*!< Filter FIFO 1 assignment for filter x */
+
+/*@defgroup _CAN_filter_mode*/
+#define _CAN_FILTERMODE_IDMASK (0U) /*!< Identifier mask mode */
+#define _CAN_FILTERMODE_IDLIST (1U) /*!< Identifier list mode */
+
+/*@defgroup _CAN_filter_scale */
+#define _CAN_FILTERSCALE_16BIT (0U) /*!< Two 16-bit filters */
+#define _CAN_FILTERSCALE_32BIT (1U) /*!< One 32-bit filter  */
+
+/** @defgroup _CAN_filter_activation CAN Filter Activation*/
+#define _CAN_FILTER_DISABLE (0U) /*!< Disable filter */
+#define _CAN_FILTER_ENABLE (1U)  /*!< Enable filter  */
+
+/** @defgroup _CAN_synchronisation_jump_width*/
+#define _CAN_SJW_1TQ (0U) /*!< 1 time quantum */
+#define _CAN_SJW_2TQ (1U) /*!< 2 time quantum */
+#define _CAN_SJW_3TQ (2U) /*!< 3 time quantum */
+#define _CAN_SJW_4TQ (3U) /*!< 4 time quantum */
+
+/** @defgroup _CAN_time_quantum_in_bit_segment_1*/
+#define _CAN_BS1_1TQ (0U)   /*!< 1 time quantum  */
+#define _CAN_BS1_2TQ (1U)   /*!< 2 time quantum  */
+#define _CAN_BS1_3TQ (2U)   /*!< 3 time quantum  */
+#define _CAN_BS1_4TQ (3U)   /*!< 4 time quantum  */
+#define _CAN_BS1_5TQ (4U)   /*!< 5 time quantum  */
+#define _CAN_BS1_6TQ (5U)   /*!< 6 time quantum  */
+#define _CAN_BS1_7TQ (6U)   /*!< 7 time quantum  */
+#define _CAN_BS1_8TQ (7U)   /*!< 8 time quantum  */
+#define _CAN_BS1_9TQ (8U)   /*!< 9 time quantum  */
+#define _CAN_BS1_10TQ (9U)  /*!< 10 time quantum */
+#define _CAN_BS1_11TQ (10U) /*!< 11 time quantum */
+#define _CAN_BS1_12TQ (11U) /*!< 12 time quantum */
+#define _CAN_BS1_13TQ (12U) /*!< 13 time quantum */
+#define _CAN_BS1_14TQ (13U) /*!< 14 time quantum */
+#define _CAN_BS1_15TQ (14U) /*!< 15 time quantum */
+#define _CAN_BS1_16TQ (15U) /*!< 16 time quantum */
+
+/** @defgroup _CAN_time_quantum_in_bit_segment_2*/
+#define _CAN_BS2_1TQ (0U) /*!< 1 time quantum */
+#define _CAN_BS2_2TQ (1U) /*!< 2 time quantum */
+#define _CAN_BS2_3TQ (2U) /*!< 3 time quantum */
+#define _CAN_BS2_4TQ (3U) /*!< 4 time quantum */
+#define _CAN_BS2_5TQ (4U) /*!< 5 time quantum */
+#define _CAN_BS2_6TQ (5U) /*!< 6 time quantum */
+#define _CAN_BS2_7TQ (6U) /*!< 7 time quantum */
+#define _CAN_BS2_8TQ (7U) /*!< 8 time quantum */
+/**---------------------------------Prototype functions-------------------------------------------------**/
+
 ErrorStatus LL_CAN_GPIO_Init(uint8_t can_type);
-ErrorStatus LL_CAN_Init(LL_CAN_TypeDef can_type, LL_CAN_InitTypeDef *hcan);
-ErrorStatus LL_CAN_ConfigFilter(LL_CAN_TypeDef can_type, LL_CAN_FilterTypeDef *hfilter);
-ErrorStatus LL_CAN_Transmit(LL_CAN_TypeDef can_type, const uint8_t data[], LL_CAN_TxHeaderTypeDef *htxheader);
-ErrorStatus LL_CAN_Start(LL_CAN_TypeDef can_type);
+ErrorStatus LL_CAN_Init(LL_CAN_TypeDef_t can_type, LL_CAN_InitTypeDef_t *hcan);
+ErrorStatus LL_CAN_ConfigFilter(LL_CAN_TypeDef_t can_type, LL_CAN_FilterTypeDef_t *hfilter);
+ErrorStatus LL_CAN_Transmit(LL_CAN_TypeDef_t can_type, const uint8_t data[], LL_CAN_TxHeaderTypeDef_t *htxheader);
+ErrorStatus LL_CAN_Start(LL_CAN_TypeDef_t can_type);
 
 #endif /* STM32F4_CAN_LL_H_ */
