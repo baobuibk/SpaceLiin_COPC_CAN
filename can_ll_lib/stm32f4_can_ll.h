@@ -135,6 +135,14 @@ typedef enum
   _CAN2
 } LL_CAN_TypeDef_t;
 
+/*CAN Handler structure*/
+typedef struct
+{
+  LL_CAN_TypeDef_t Instance;
+  LL_CAN_InitTypeDef_t Init;
+  volatile uint32_t ErrorCode;
+
+} LL_CAN_Handler_t;
 /*CAN filter configuration structure definition*/
 typedef struct
 {
@@ -331,6 +339,25 @@ typedef struct
 #define WKUIE (16U)
 #define SLKIE (17U)
 
+// Bit position of CAN_RF0R
+#define RFOM0 (5U)
+#define FOVR0 (4U)
+#define FULL0 (3U)
+#define FMP0 (0U)
+
+// Bit position of CAN_RF01
+#define RFOM1 (5U)
+#define FOVR1 (4U)
+#define FULL1 (3U)
+#define FMP1 (0U)
+
+// Bit position of CAN_ESR
+#define EWGF (0U)
+#define EPVF (1U)
+#define BOFF (2U)
+#define LEC (4U)
+#define TEC (16U)
+#define REC (24U)
 /**---------------------------------@defgroup-------------------------------------------------**/
 /*@defgroup _CAN_operating_mode */
 #define _CAN_MODE_NORMAL ((0 << SILM) | (0 << LBKM))          /*!< Normal mode   */
@@ -395,12 +422,59 @@ typedef struct
 #define _CAN_BS2_6TQ (5U) /*!< 6 time quantum */
 #define _CAN_BS2_7TQ (6U) /*!< 7 time quantum */
 #define _CAN_BS2_8TQ (7U) /*!< 8 time quantum */
+
+/** @defgroup _CAN_receive_FIFO_number*/
+#define _CAN_RX_FIFO0 (0U) /*!< CAN receive FIFO 0 */
+#define _CAN_RX_FIFO1 (1U) /*!< CAN receive FIFO 1 */
+
+/**---------------------------------Error Code-------------------------------------------------**/
+
+#define LL_CAN_ERROR_NONE (0x00000000U)            /*!< No error                                             */
+#define LL_CAN_ERROR_EWG (0x00000001U)             /*!< Protocol Error Warning                               */
+#define LL_CAN_ERROR_EPV (0x00000002U)             /*!< Error Passive                                        */
+#define LL_CAN_ERROR_BOF (0x00000004U)             /*!< Bus-off error                                        */
+#define LL_CAN_ERROR_STF (0x00000008U)             /*!< Stuff error                                          */
+#define LL_CAN_ERROR_FOR (0x00000010U)             /*!< Form error                                           */
+#define LL_CAN_ERROR_ACK (0x00000020U)             /*!< Acknowledgment error                                 */
+#define LL_CAN_ERROR_BR (0x00000040U)              /*!< Bit recessive error                                  */
+#define LL_CAN_ERROR_BD (0x00000080U)              /*!< Bit dominant error                                   */
+#define LL_CAN_ERROR_CRC (0x00000100U)             /*!< CRC error                                            */
+#define LL_CAN_ERROR_RX_FOV0 (0x00000200U)         /*!< Rx FIFO0 overrun error                               */
+#define LL_CAN_ERROR_RX_FOV1 (0x00000400U)         /*!< Rx FIFO1 overrun error                               */
+#define LL_CAN_ERROR_TX_ALST0 (0x00000800U)        /*!< TxMailbox 0 transmit failure due to arbitration lost */
+#define LL_CAN_ERROR_TX_TERR0 (0x00001000U)        /*!< TxMailbox 0 transmit failure due to transmit error   */
+#define LL_CAN_ERROR_TX_ALST1 (0x00002000U)        /*!< TxMailbox 1 transmit failure due to arbitration lost */
+#define LL_CAN_ERROR_TX_TERR1 (0x00004000U)        /*!< TxMailbox 1 transmit failure due to transmit error   */
+#define LL_CAN_ERROR_TX_ALST2 (0x00008000U)        /*!< TxMailbox 2 transmit failure due to arbitration lost */
+#define LL_CAN_ERROR_TX_TERR2 (0x00010000U)        /*!< TxMailbox 2 transmit failure due to transmit error   */
+#define LL_CAN_ERROR_TIMEOUT (0x00020000U)         /*!< Timeout error                                        */
+#define LL_CAN_ERROR_NOT_INITIALIZED (0x00040000U) /*!< Peripheral not initialized                           */
+#define LL_CAN_ERROR_NOT_READY (0x00080000U)       /*!< Peripheral not ready                                 */
+#define LL_CAN_ERROR_NOT_STARTED (0x00100000U)     /*!< Peripheral not started                               */
+#define LL_CAN_ERROR_PARAM (0x00200000U)           /*!< Parameter error                                      */
+
 /**---------------------------------Prototype functions-------------------------------------------------**/
 
-ErrorStatus LL_CAN_GPIO_Init(uint8_t can_type);
-ErrorStatus LL_CAN_Init(LL_CAN_TypeDef_t can_type, LL_CAN_InitTypeDef_t *hcan);
-ErrorStatus LL_CAN_ConfigFilter(LL_CAN_TypeDef_t can_type, LL_CAN_FilterTypeDef_t *hfilter);
-ErrorStatus LL_CAN_Transmit(LL_CAN_TypeDef_t can_type, const uint8_t data[], LL_CAN_TxHeaderTypeDef_t *htxheader);
-ErrorStatus LL_CAN_Start(LL_CAN_TypeDef_t can_type);
+ErrorStatus LL_CAN_GPIO_Init(LL_CAN_Handler_t *hcan);
+ErrorStatus LL_CAN_Init(LL_CAN_Handler_t *hcan);
+ErrorStatus LL_CAN_ConfigFilter(LL_CAN_Handler_t *hcan, LL_CAN_FilterTypeDef_t *hfilter);
+ErrorStatus LL_CAN_AddTxMessage(LL_CAN_Handler_t *hcan, const uint8_t data[], LL_CAN_TxHeaderTypeDef_t *htxheader, uint32_t TxMailBox);
+ErrorStatus LL_CAN_IsTxMessagePending(LL_CAN_Handler_t *hcan, uint32_t TxMailBox);
+ErrorStatus LL_CAN_Start(LL_CAN_Handler_t *hcan);
+
+/**---------------------------------Interrupt callback-------------------------------------------------**/
+void LL_CAN_TxMailbox0CompleteCallback(LL_CAN_Handler_t *hcan);
+void LL_CAN_TxMailbox1CompleteCallback(LL_CAN_Handler_t *hcan);
+void LL_CAN_TxMailbox2CompleteCallback(LL_CAN_Handler_t *hcan);
+void LL_CAN_TxMailbox0AbortCallback(LL_CAN_Handler_t *hcan);
+void LL_CAN_TxMailbox1AbortCallback(LL_CAN_Handler_t *hcan);
+void LL_CAN_TxMailbox2AbortCallback(LL_CAN_Handler_t *hcan);
+void LL_CAN_RxFifo0MsgPendingCallback(LL_CAN_Handler_t *hcan);
+void LL_CAN_RxFifo0FullCallback(LL_CAN_Handler_t *hcan);
+void LL_CAN_RxFifo1MsgPendingCallback(LL_CAN_Handler_t *hcan);
+void LL_CAN_RxFifo1FullCallback(LL_CAN_Handler_t *hcan);
+void LL_CAN_SleepCallback(LL_CAN_Handler_t *hcan);
+void LL_CAN_WakeUpFromRxMsgCallback(LL_CAN_Handler_t *hcan);
+void LL_CAN_ErrorCallback(LL_CAN_Handler_t *hcan);
 
 #endif /* STM32F4_CAN_LL_H_ */

@@ -45,12 +45,15 @@
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-LL_CAN_InitTypeDef_t hcan1;
+LL_CAN_Handler_t hcan1;
 LL_CAN_FilterTypeDef_t hfilter1;
 LL_CAN_TxHeaderTypeDef_t Txheader;
+
 uint8_t data[8] = {0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80};
 uint8_t data1[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 char msg[50];
+
+uint32_t TxMailBox;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -97,9 +100,11 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
+  hcan1.Instance = _CAN1;
+
   LL_GPIO_SetOutputPin(GPIOC, LL_GPIO_PIN_5);
 
-  if (LL_CAN_GPIO_Init(_CAN1) == ERROR)
+  if (LL_CAN_GPIO_Init(&hcan1) == ERROR)
   {
     sprintf(msg, "GPIO initialization fail\n");
     HAL_UART_Transmit(&huart2, (uint8_t *)msg, 50, 1000);
@@ -116,19 +121,19 @@ int main(void)
 
   // Set flag to
 
-  hcan1.Prescaler = 2;
-  hcan1.SyncJumpWidth = _CAN_SJW_1TQ;
-  hcan1.TimeSeg1 = _CAN_BS1_10TQ;
-  hcan1.TimeSeg2 = _CAN_BS2_1TQ;
-  hcan1.Mode = _NORMAL_MODE;
-  hcan1.status.AutoBusOff = DISABLE;
-  hcan1.status.AutoRetransmission = ENABLE;
-  hcan1.status.AutoWakeUp = DISABLE;
-  hcan1.status.ReceiveFifoLocked = DISABLE;
-  hcan1.status.TimeTriggeredMode = DISABLE;
-  hcan1.status.TransmitFifoPriority = DISABLE;
+  hcan1.Init.Prescaler = 2;
+  hcan1.Init.SyncJumpWidth = _CAN_SJW_1TQ;
+  hcan1.Init.TimeSeg1 = _CAN_BS1_10TQ;
+  hcan1.Init.TimeSeg2 = _CAN_BS2_1TQ;
+  hcan1.Init.Mode = _NORMAL_MODE;
+  hcan1.Init.status.AutoBusOff = DISABLE;
+  hcan1.Init.status.AutoRetransmission = ENABLE;
+  hcan1.Init.status.AutoWakeUp = DISABLE;
+  hcan1.Init.status.ReceiveFifoLocked = DISABLE;
+  hcan1.Init.status.TimeTriggeredMode = DISABLE;
+  hcan1.Init.status.TransmitFifoPriority = DISABLE;
 
-  if (LL_CAN_Init(_CAN1, &hcan1) == ERROR)
+  if (LL_CAN_Init(&hcan1) == ERROR)
   {
     sprintf(msg, "Can initialization fail\n");
     HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
@@ -149,10 +154,10 @@ int main(void)
   hfilter1.FilterMaskIdLow = 0x0000;
   hfilter1.FilterMode = _CAN_FILTERMODE_IDMASK;
   hfilter1.FilterScale = _CAN_FILTERSCALE_32BIT;
-  LL_CAN_ConfigFilter(_CAN1, &hfilter1);
+  LL_CAN_ConfigFilter(&hcan1, &hfilter1);
 
   // Start Can
-  if (LL_CAN_Start(_CAN1) == ERROR)
+  if (LL_CAN_Start(&hcan1) == ERROR)
   {
     sprintf(msg, "Can start fail\n");
     HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
@@ -179,11 +184,12 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-    if (LL_CAN_Transmit(_CAN1, data1, &Txheader) == SUCCESS)
+    if (LL_CAN_AddTxMessage(&hcan1, data1, &Txheader, TxMailBox) == SUCCESS)
     {
-      LL_GPIO_TogglePin(GPIOC, LL_GPIO_PIN_5);
-      sprintf(msg, "Transmission fail\n");
-      HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
+      if (LL_CAN_IsTxMessagePending(&hcan1, TxMailBox) == SUCCESS)
+      {
+        LL_GPIO_TogglePin(GPIOC, LL_GPIO_PIN_5);
+      }
     }
     Anti_WDG();
   }
