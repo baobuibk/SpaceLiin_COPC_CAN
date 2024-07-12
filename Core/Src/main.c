@@ -48,9 +48,10 @@ UART_HandleTypeDef huart2;
 LL_CAN_Handler_t hcan1;
 LL_CAN_FilterTypeDef_t hfilter1;
 LL_CAN_TxHeaderTypeDef_t Txheader;
-
+LL_CAN_RxHeaderTypeDef_t Rxheader;
 uint8_t data[8] = {0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80};
 uint8_t data1[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+uint8_t rxdata[8];
 char msg[50];
 
 uint32_t TxMailBox;
@@ -62,6 +63,8 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 void Anti_WDG();
+void Can_Rx();
+void Can_Tx();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -115,17 +118,23 @@ int main(void)
     HAL_UART_Transmit(&huart2, (uint8_t *)msg, 50, 1000);
   }
 
-  // Config NVIC
-  NVIC_SetPriority(CAN1_RX0_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 0));
-  NVIC_EnableIRQ(CAN1_RX0_IRQn);
+  //  // Config NVIC
+  //  NVIC_SetPriority(CAN1_TX_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 15, 0));
+  //  NVIC_SetPriority(CAN1_RX0_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 15, 0));
+  //  NVIC_EnableIRQ(CAN1_RX0_IRQn);
+  //  NVIC_EnableIRQ(CAN1_TX_IRQn);
+  //  HAL_NVIC_SetPriority(CAN1_RX0_IRQn, 15, 0);
+  //  HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
 
+  // Enable interrupt
+  LL_CAN_ActivateInterrupt(&hcan1, _CAN_IT_RX_FIFO0_MSG_PENDING_Pos | _CAN_IT_TX_MAILBOX_EMPTY_Pos | _CAN_IT_RX_FIFO1_MSG_PENDING_Pos);
   // Set flag to
 
-  hcan1.Init.Prescaler = 2;
+  hcan1.Init.Prescaler = 3;
   hcan1.Init.SyncJumpWidth = _CAN_SJW_1TQ;
-  hcan1.Init.TimeSeg1 = _CAN_BS1_10TQ;
-  hcan1.Init.TimeSeg2 = _CAN_BS2_1TQ;
-  hcan1.Init.Mode = _NORMAL_MODE;
+  hcan1.Init.TimeSeg1 = _CAN_BS1_13TQ;
+  hcan1.Init.TimeSeg2 = _CAN_BS2_2TQ;
+  hcan1.Init.Mode = _LOOPBACK_MODE;
   hcan1.Init.status.AutoBusOff = DISABLE;
   hcan1.Init.status.AutoRetransmission = ENABLE;
   hcan1.Init.status.AutoWakeUp = DISABLE;
@@ -148,13 +157,16 @@ int main(void)
   hfilter1.FilterActivation = _CAN_FILTER_ENABLE;
   hfilter1.FilterBank = 0;
   hfilter1.FilterFIFOAssignment = _CAN_FILTER_FIFO0;
-  hfilter1.FilterIdHigh = 0x00C0;
-  hfilter1.FilterIdLow = 0x0000;
-  hfilter1.FilterMaskIdHigh = 0x01C0;
-  hfilter1.FilterMaskIdLow = 0x0000;
+  hfilter1.FilterIdHigh = 0x0000;
+  hfilter1.FilterIdLow = 0;
+  hfilter1.FilterMaskIdHigh = 0;
+  hfilter1.FilterMaskIdLow = 0;
   hfilter1.FilterMode = _CAN_FILTERMODE_IDMASK;
   hfilter1.FilterScale = _CAN_FILTERSCALE_32BIT;
   LL_CAN_ConfigFilter(&hcan1, &hfilter1);
+
+    // Enable interrupt
+    LL_CAN_ActivateInterrupt(&hcan1, _CAN_IT_RX_FIFO0_MSG_PENDING_Pos | _CAN_IT_TX_MAILBOX_EMPTY_Pos);
 
   // Start Can
   if (LL_CAN_Start(&hcan1) == ERROR)
@@ -183,15 +195,10 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
-    if (LL_CAN_AddTxMessage(&hcan1, data1, &Txheader, TxMailBox) == SUCCESS)
-    {
-      if (LL_CAN_IsTxMessagePending(&hcan1, TxMailBox) == SUCCESS)
-      {
-        LL_GPIO_TogglePin(GPIOC, LL_GPIO_PIN_5);
-      }
-    }
-    Anti_WDG();
+//    Can_Rx();
+    Can_Tx();
+    LL_mDelay(5000);
+    //    Anti_WDG();
   }
   /* USER CODE END 3 */
 }
@@ -318,9 +325,64 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void Anti_WDG()
 {
-  LL_GPIO_SetOutputPin(GPIOA, LL_GPIO_PIN_1);
-  LL_mDelay(200);
-  LL_GPIO_ResetOutputPin(GPIOA, LL_GPIO_PIN_1);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, 1);
+  HAL_Delay(200);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, 0);
+  HAL_Delay(1000);
+}
+
+void Can_Rx()
+{
+  if (LL_CAN_GetRxFifoFillLevel(&hcan1, _CAN_RX_FIFO0) != 0)
+  {
+    if (LL_CAN_GetRxMessage(&hcan1, &Rxheader, rxdata, _CAN_RX_FIFO0) == ERROR)
+    {
+      sprintf(msg, "Receive Fail\n");
+      HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
+    }
+  }
+}
+void Can_Tx()
+{
+  if (LL_CAN_AddTxMessage(&hcan1, data1, &Txheader, &TxMailBox) == ERROR)
+  {
+    //          if (LL_CAN_IsTxMessagePending(&hcan1, &TxMailBox) == SUCCESS)
+    //          {
+    //            LL_GPIO_TogglePin(GPIOC, LL_GPIO_PIN_5);
+    //          }
+    sprintf(msg, "Transmit Fail\n");
+    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
+  }
+}
+
+void LL_CAN_TxMailbox0CompleteCallback(LL_CAN_Handler_t *hcan)
+{
+  sprintf(msg, "Transmit Successfully M0\n");
+  HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
+}
+void LL_CAN_TxMailbox1CompleteCallback(LL_CAN_Handler_t *hcan)
+{
+  sprintf(msg, "Transmit Successfully M1\n");
+  HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
+}
+void LL_CAN_TxMailbox2CompleteCallback(LL_CAN_Handler_t *hcan)
+{
+  sprintf(msg, "Transmit Successfully M2\n");
+  HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
+}
+void LL_CAN_RxFifo0MsgPendingCallback(LL_CAN_Handler_t *hcan)
+{
+  if (LL_CAN_GetRxMessage(&hcan1, &Rxheader, rxdata, _CAN_RX_FIFO0) == ERROR)
+  {
+    sprintf(msg, "Receive Fail\n");
+    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
+  }
+  else
+  {
+    sprintf(msg, "Receive data Successfully \n");
+    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
+    LL_GPIO_TogglePin(GPIOC, LL_GPIO_PIN_5);
+  }
 }
 /* USER CODE END 4 */
 

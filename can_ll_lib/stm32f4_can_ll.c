@@ -15,7 +15,7 @@
 CAN_TypeDef_t *canbase;
 
 // Static prototypes
-static void Trans(CAN_TypeDef_t *canbase, const uint8_t data[], LL_CAN_TxHeaderTypeDef_t *htxheader, uint32_t TxMailBox);
+static void Trans(CAN_TypeDef_t *canbase, const uint8_t data[], LL_CAN_TxHeaderTypeDef_t *htxheader, uint32_t *TxMailBox);
 
 /**
  * The function `LL_CAN_GPIO_Init` initializes GPIO pins for CAN communication based on the specified
@@ -69,8 +69,18 @@ ErrorStatus LL_CAN_GPIO_Init(LL_CAN_Handler_t *hcan)
 		LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 		status = SUCCESS;
 	}
+
 	else
 		status = ERROR;
+	  HAL_NVIC_SetPriority(CAN1_TX_IRQn, 15, 0);
+	  HAL_NVIC_SetPriority(CAN1_RX0_IRQn, 15, 0);
+	  HAL_NVIC_SetPriority(CAN1_RX1_IRQn, 15, 0);
+	  HAL_NVIC_SetPriority(CAN1_SCE_IRQn, 15, 0);
+
+	  HAL_NVIC_EnableIRQ(CAN1_TX_IRQn);
+	  HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
+	  HAL_NVIC_EnableIRQ(CAN1_RX1_IRQn);
+	  HAL_NVIC_EnableIRQ(CAN1_SCE_IRQn);
 	return status;
 }
 
@@ -175,7 +185,7 @@ ErrorStatus LL_CAN_Init(LL_CAN_Handler_t *hcan)
 	if (hcan->Init.status.AutoRetransmission == DISABLE)
 		(canbase->CAN_MCR) |= (1U << NART);
 	else
-		(canbase->CAN_MCR) &= (1U << NART);
+		(canbase->CAN_MCR) &= ~(1U << NART);
 
 	// Can ReceiveFifoLocked, default value of bit RFLM=0
 	if (hcan->Init.status.ReceiveFifoLocked == ENABLE)
@@ -201,7 +211,6 @@ ErrorStatus LL_CAN_Init(LL_CAN_Handler_t *hcan)
 	else
 		(canbase->CAN_MCR) &= ~(1U << ABOM);
 
-	(canbase->CAN_MCR) |= (1U << DBF);
 	return status;
 }
 
@@ -216,7 +225,7 @@ ErrorStatus LL_CAN_ConfigFilter(LL_CAN_Handler_t *hcan, LL_CAN_FilterTypeDef_t *
 		canbase = _CAN1_REG_BASE;
 		status = SUCCESS;
 	}
-	else if (hcan->Instance == _CAN2)
+	else
 	{
 		canbase = _CAN2_REG_BASE;
 		status = SUCCESS;
@@ -237,8 +246,8 @@ ErrorStatus LL_CAN_ConfigFilter(LL_CAN_Handler_t *hcan, LL_CAN_FilterTypeDef_t *
 	// Init filter mode
 	(canbase->CAN_FMR) |= (1U << FINIT);
 
-	// If CAN2 is on, we can use Slave start filter bank
-	if (hcan->Instance == _CAN2)
+	// Select the start filter number of CAN2 slave instance
+	if (hcan->Instance == _CAN1)
 	{
 		(canbase->CAN_FMR) &= ~(1U << CAN2SB);
 		(canbase->CAN_FMR) |= ((hfilter->SlaveStartFilterBank) << CAN2SB);
@@ -247,32 +256,29 @@ ErrorStatus LL_CAN_ConfigFilter(LL_CAN_Handler_t *hcan, LL_CAN_FilterTypeDef_t *
 	// Convert filter bank number into bit position
 	filter_bank_pos = (1U << ((hfilter->FilterBank) & 0x1FU));
 
-	// Config filter mode
-	if (hfilter->FilterMode == _CAN_FILTERMODE_IDMASK)
-	{
-		(canbase->CAN_FM1R) &= ~(filter_bank_pos);
-	}
-	else
-	{
-		(canbase->CAN_FM1R) |= (filter_bank_pos);
-	}
+
+
+	//Filter deactivation
+	(canbase->CAN_FA1R) &= ~(filter_bank_pos);
 
 	// Config filter scale
 	if (hfilter->FilterScale == _CAN_FILTERSCALE_16BIT)
 	{
 		(canbase->CAN_FS1R) &= ~(filter_bank_pos);
 
-		// First 16 bits is Identifier, second 16 bits is Mask
+		//First 16-bit identifier and First 16-bit mask
+	    //Or First 16-bit identifier and Second 16-bit identifier
 		(canbase->CAN_sFilterRegister[hfilter->FilterBank].FR1) =
 			((0x0000FFFFU & (uint32_t)hfilter->FilterMaskIdLow) << 16U) |
 			(0x0000FFFFU & (uint32_t)hfilter->FilterIdLow);
 
-		// First 16 bits is Identifier, second 16 bits is Mask
+		//Second 16-bit identifier and Second 16-bit mask */
+	     // Or Third 16-bit identifier and Fourth 16-bit identifier */
 		(canbase->CAN_sFilterRegister[hfilter->FilterBank].FR2) =
 			((0x0000FFFFU & (uint32_t)hfilter->FilterMaskIdHigh) << 16U) |
 			(0x0000FFFFU & (uint32_t)hfilter->FilterIdHigh);
 	}
-	else if (hfilter->FilterScale == _CAN_FILTERSCALE_32BIT)
+	if (hfilter->FilterScale == _CAN_FILTERSCALE_32BIT)
 	{
 		(canbase->CAN_FS1R) |= (filter_bank_pos);
 
@@ -287,6 +293,15 @@ ErrorStatus LL_CAN_ConfigFilter(LL_CAN_Handler_t *hcan, LL_CAN_FilterTypeDef_t *
 			(0x0000FFFFU & (uint32_t)hfilter->FilterMaskIdLow);
 	}
 
+	// Config filter mode
+		if (hfilter->FilterMode == _CAN_FILTERMODE_IDMASK)
+		{
+			(canbase->CAN_FM1R) &= ~(filter_bank_pos);
+		}
+		else
+		{
+			(canbase->CAN_FM1R) |= (filter_bank_pos);
+		}
 	// Config filter FIFO assignment (FIFO0 or FIFO1)
 	if (hfilter->FilterFIFOAssignment == _CAN_FILTER_FIFO0)
 	{
@@ -297,7 +312,7 @@ ErrorStatus LL_CAN_ConfigFilter(LL_CAN_Handler_t *hcan, LL_CAN_FilterTypeDef_t *
 		(canbase->CAN_FFA1R) |= (filter_bank_pos);
 	}
 
-	// Active or Deactive filter
+	// Filter activation
 	if (hfilter->FilterActivation == _CAN_FILTER_ENABLE)
 	{
 		(canbase->CAN_FA1R) |= (filter_bank_pos);
@@ -307,6 +322,8 @@ ErrorStatus LL_CAN_ConfigFilter(LL_CAN_Handler_t *hcan, LL_CAN_FilterTypeDef_t *
 		(canbase->CAN_FA1R) &= ~(filter_bank_pos);
 	}
 
+	//Leave the initialisation mode for the filter
+	(canbase->CAN_FMR) &= ~(1U << FINIT);
 	return status;
 }
 
@@ -340,7 +357,7 @@ ErrorStatus LL_CAN_Start(LL_CAN_Handler_t *hcan)
 	return status;
 }
 
-ErrorStatus LL_CAN_AddTxMessage(LL_CAN_Handler_t *hcan, const uint8_t data[], LL_CAN_TxHeaderTypeDef_t *htxheader, uint32_t TxMailBox)
+ErrorStatus LL_CAN_AddTxMessage(LL_CAN_Handler_t *hcan, const uint8_t data[], LL_CAN_TxHeaderTypeDef_t *htxheader, uint32_t *TxMailBox)
 {
 	ErrorStatus status = ERROR;
 
@@ -379,14 +396,14 @@ ErrorStatus LL_CAN_AddTxMessage(LL_CAN_Handler_t *hcan, const uint8_t data[], LL
 	return status;
 }
 
-static void Trans(CAN_TypeDef_t *canbase, const uint8_t data[], LL_CAN_TxHeaderTypeDef_t *htxheader, uint32_t TxMailBox)
+static void Trans(CAN_TypeDef_t *canbase, const uint8_t data[], LL_CAN_TxHeaderTypeDef_t *htxheader, uint32_t *TxMailBox)
 {
 
 	uint32_t transmitmailbox;
 
 	// Select an empty transmit mailbox
 	transmitmailbox = (((canbase->CAN_TSR) >> CODE) & 0x03);
-	TxMailBox = transmitmailbox;
+	*TxMailBox = transmitmailbox;
 	// Set up the ID
 	if (htxheader->_IDE == _CAN_ID_STD)
 	{
@@ -398,11 +415,6 @@ static void Trans(CAN_TypeDef_t *canbase, const uint8_t data[], LL_CAN_TxHeaderT
 	}
 
 	// Set up the DLC
-	(canbase->sTxMailBox[transmitmailbox].TDTR) = ((htxheader->_DLC) << DLC);
-
-	// Set up data
-	(canbase->sTxMailBox[0].TDHR) = (((uint32_t)data[7] << CAN_TDHR_DATA7_Pos) | ((uint32_t)data[6] << CAN_TDHR_DATA6_Pos) | ((uint32_t)data[5] << CAN_TDHR_DATA5_Pos) | ((uint32_t)data[4] << CAN_TDHR_DATA4_Pos));
-	(canbase->sTxMailBox[0].TDLR) = ((uint32_t)(data[3] << CAN_TDLR_DATA3_Pos) | ((uint32_t)data[2] << CAN_TDLR_DATA2_Pos) | ((uint32_t)data[1] << CAN_TDLR_DATA1_Pos) | ((uint32_t)data[0] << CAN_TDLR_DATA0_Pos));
 
 	// Set up the Transmit Global Time mode
 	if (htxheader->TransmitGlobalTime == ENABLE)
@@ -410,10 +422,16 @@ static void Trans(CAN_TypeDef_t *canbase, const uint8_t data[], LL_CAN_TxHeaderT
 		canbase->sTxMailBox[transmitmailbox].TDTR |= ((htxheader->TransmitGlobalTime) << TGT);
 	}
 
+	// Set up data
+	(canbase->sTxMailBox[transmitmailbox].TDHR) = (((uint32_t)data[7] << CAN_TDHR_DATA7_Pos) | ((uint32_t)data[6] << CAN_TDHR_DATA6_Pos) | ((uint32_t)data[5] << CAN_TDHR_DATA5_Pos) | ((uint32_t)data[4] << CAN_TDHR_DATA4_Pos));
+	(canbase->sTxMailBox[transmitmailbox].TDLR) = ((uint32_t)(data[3] << CAN_TDLR_DATA3_Pos) | ((uint32_t)data[2] << CAN_TDLR_DATA2_Pos) | ((uint32_t)data[1] << CAN_TDLR_DATA1_Pos) | ((uint32_t)data[0] << CAN_TDLR_DATA0_Pos));
+
+
 	// Request transmission by enable bit TXRQ
 	(canbase->sTxMailBox[transmitmailbox].TIR) |= (1UL << TXRQ);
+
 }
-ErrorStatus LL_CAN_IsTxMessagePending(LL_CAN_Handler_t *hcan, uint32_t TxMailBox)
+ErrorStatus LL_CAN_IsTxMessagePending(LL_CAN_Handler_t *hcan, uint32_t *TxMailBox)
 {
 	ErrorStatus status = ERROR;
 	// Check CAN`s instance is CAN1 or CAN2
@@ -426,7 +444,7 @@ ErrorStatus LL_CAN_IsTxMessagePending(LL_CAN_Handler_t *hcan, uint32_t TxMailBox
 		canbase = _CAN2_REG_BASE;
 	}
 	// Check pending transmission request on the selected Tx Mailboxes
-	if (!((canbase->CAN_TSR) & ((1U << TxMailBox) << TME0)))
+	if (!((canbase->CAN_TSR) & ((1U << *TxMailBox) << TME0)))
 	{
 		status = SUCCESS;
 	}
@@ -456,6 +474,110 @@ uint32_t LL_CAN_GetRxFifoFillLevel(LL_CAN_Handler_t *hcan, uint32_t RxFifo)
 		filllevel = (canbase->CAN_RF1R & (3U << FMP1));
 	}
 	return filllevel;
+}
+
+ErrorStatus LL_CAN_GetRxMessage(LL_CAN_Handler_t *hcan, LL_CAN_RxHeaderTypeDef_t *hrxheader, uint8_t rxdata[], uint32_t RxFifo)
+{
+	// Check the parameters
+	assert_param(rxdata);
+	assert_param(RxFifo);
+
+	if (hcan->Instance == _CAN1)
+	{
+		canbase = _CAN1_REG_BASE;
+	}
+	else
+	{
+		canbase = _CAN2_REG_BASE;
+	}
+
+	/* Check the Rx FIFO */
+	if (RxFifo == _CAN_RX_FIFO0) /* Rx element is assigned to Rx FIFO 0 */
+	{
+		/* Check that the Rx FIFO 0 is not empty */
+		if (((canbase->CAN_RF0R) & (1 << FMP0)) == 0U)
+		{
+			/* Update error code */
+			hcan->ErrorCode |= LL_CAN_ERROR_PARAM;
+
+			return ERROR;
+		}
+	}
+	else /* Rx element is assigned to Rx FIFO 1 */
+	{
+		/* Check that the Rx FIFO 1 is not empty */
+		if (((canbase->CAN_RF1R) & (1 << FMP1)) == 0U)
+		{
+			/* Update error code */
+			hcan->ErrorCode |= LL_CAN_ERROR_PARAM;
+
+			return ERROR;
+		}
+	}
+
+	// Get ID
+	hrxheader->_IDE = (((1U << IDE_rx) & (canbase->sFIFOMailBox[RxFifo].RIR)) >> IDE_rx);
+	if (hrxheader->_IDE == _CAN_ID_STD)
+	{
+		hrxheader->StdId = ((((0x7FF << STID_rx) & (canbase->sFIFOMailBox[RxFifo].RIR))) >> STID_rx);
+	}
+	else
+	{
+		hrxheader->ExtId = ((((0x1FFFFFFF << EXID_rx) & (canbase->sFIFOMailBox[RxFifo].RIR))) >> EXID);
+	}
+
+	// Get Remote transmission request
+	hrxheader->_RTR = (((1U << RTR_rx) & (canbase->sFIFOMailBox[RxFifo].RIR)) >> RTR_rx);
+	if ((((0xF << DLC_rx) & (canbase->sFIFOMailBox[RxFifo].RDTR)) >> DLC_rx) >= 8U)
+	{
+		/* Truncate DLC to 8 if received field is over range */
+		hrxheader->_DLC = 8U;
+	}
+	else
+	{
+		hrxheader->_DLC = (((0xF << DLC_rx) & (canbase->sFIFOMailBox[RxFifo].RDTR)) >> DLC_rx);
+	}
+
+	hrxheader->FilterMatchIndex = (((0xFF << FMI_rx) & (canbase->sFIFOMailBox[RxFifo].RDTR)) >> FMI_rx);
+	hrxheader->Timestamp = (((0xFFFF << TIME_rx) & (canbase->sFIFOMailBox[RxFifo].RDTR)) >> TIME_rx);
+
+	/* Get the data */
+	rxdata[0] = (uint8_t)((0XFF << CAN_RDLR_DATA0_Pos) & canbase->sFIFOMailBox[RxFifo].RDLR) >> CAN_RDLR_DATA0_Pos;
+	rxdata[1] = (uint8_t)((0XFF << CAN_RDLR_DATA1_Pos) & canbase->sFIFOMailBox[RxFifo].RDLR) >> CAN_RDLR_DATA1_Pos;
+	rxdata[2] = (uint8_t)((0XFF << CAN_RDLR_DATA2_Pos) & canbase->sFIFOMailBox[RxFifo].RDLR) >> CAN_RDLR_DATA2_Pos;
+	rxdata[3] = (uint8_t)((0XFF << CAN_RDLR_DATA3_Pos) & canbase->sFIFOMailBox[RxFifo].RDLR) >> CAN_RDLR_DATA3_Pos;
+	rxdata[4] = (uint8_t)((0XFF << CAN_RDHR_DATA4_Pos) & canbase->sFIFOMailBox[RxFifo].RDHR) >> CAN_RDHR_DATA4_Pos;
+	rxdata[5] = (uint8_t)((0XFF << CAN_RDHR_DATA5_Pos) & canbase->sFIFOMailBox[RxFifo].RDHR) >> CAN_RDHR_DATA5_Pos;
+	rxdata[6] = (uint8_t)((0XFF << CAN_RDHR_DATA6_Pos) & canbase->sFIFOMailBox[RxFifo].RDHR) >> CAN_RDHR_DATA6_Pos;
+	rxdata[7] = (uint8_t)((0XFF << CAN_RDHR_DATA7_Pos) & canbase->sFIFOMailBox[RxFifo].RDHR) >> CAN_RDHR_DATA7_Pos;
+
+	/* Release the FIFO */
+	if (RxFifo == _CAN_RX_FIFO0) /* Rx element is assigned to Rx FIFO 0 */
+	{
+		/* Release RX FIFO 0 */
+		canbase->CAN_RF0R |= (1U << RFOM0);
+	}
+	else /* Rx element is assigned to Rx FIFO 1 */
+	{
+		/* Release RX FIFO 1 */
+		canbase->CAN_RF1R |= (1U << RFOM1);
+	}
+
+	return SUCCESS;
+}
+
+void LL_CAN_ActivateInterrupt(LL_CAN_Handler_t *hcan, uint32_t ActiveITs)
+{
+	if (hcan->Instance == _CAN1)
+	{
+		canbase = _CAN1_REG_BASE;
+	}
+	else
+	{
+		canbase = _CAN2_REG_BASE;
+	}
+	/* Enable the selected interrupts */
+	(canbase->CAN_IER) |= (ActiveITs);
 }
 /*
   ==============================================================================
@@ -733,10 +855,8 @@ void LL_CAN_IRQHandler(LL_CAN_Handler_t *hcan)
 		if ((tsrflags & (1U << RQCP0)) != 0U)
 		{
 			/* Clear the Transmission Complete flag (and TXOK0,ALST0,TERR0 bits) */
-			tsrflags |= (1U << RQCP0);
-			//			tsrflags |= (1U << TXOK0);
-			//			tsrflags |= (1U << ALST0);
-			//			tsrflags |= (1U << TERR0);
+			(canbase->CAN_TSR) |= (1U << RQCP0);
+
 			if ((tsrflags & (1U << TXOK0)) != 0U)
 			{
 				/* Transmission Mailbox 0 complete callback */
@@ -767,9 +887,6 @@ void LL_CAN_IRQHandler(LL_CAN_Handler_t *hcan)
 		{
 			/* Clear the Transmission Complete flag (and TXOK1,ALST1,TERR1 bits) */
 			tsrflags |= (1U << RQCP1);
-			//			tsrflags |= (1U << TXOK1);
-			//			tsrflags |= (1U << ALST1);
-			//			tsrflags |= (1U << TERR1);
 
 			if ((tsrflags & (1U << TXOK1)) != 0U)
 			{
@@ -801,9 +918,6 @@ void LL_CAN_IRQHandler(LL_CAN_Handler_t *hcan)
 		{
 			/* Clear the Transmission Complete flag (and TXOK2,ALST2,TERR2 bits) */
 			tsrflags |= (1U << RQCP2);
-			//			tsrflags |= (1U << TXOK2);
-			//			tsrflags |= (1U << ALST2);
-			//			tsrflags |= (1U << TERR2);
 
 			if ((tsrflags & (1U << TXOK2)) != 0U)
 			{
@@ -840,7 +954,7 @@ void LL_CAN_IRQHandler(LL_CAN_Handler_t *hcan)
 			errorcode |= LL_CAN_ERROR_RX_FOV0;
 
 			/* Clear FIFO0 Overrun Flag */
-			rf0rflags &= ~(1U << FOVR0);
+			(canbase->CAN_RF0R) &= ~(1U << FOVR0);
 		}
 	}
 

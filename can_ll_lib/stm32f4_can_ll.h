@@ -23,6 +23,15 @@ typedef struct
   volatile uint32_t TDHR; /*!< CAN mailbox data high register */
 } LL_CAN_TxMailBox_TypeDef_t;
 
+/*Controller Area Network FIFOMailBox*/
+typedef struct
+{
+  volatile uint32_t RIR;  /*!< CAN receive FIFO mailbox identifier register */
+  volatile uint32_t RDTR; /*!< CAN receive FIFO mailbox data length control and time stamp register */
+  volatile uint32_t RDLR; /*!< CAN receive FIFO mailbox data low register */
+  volatile uint32_t RDHR; /*!< CAN receive FIFO mailbox data high register */
+} LL_CAN_FIFOMailBox_TypeDef_t;
+
 /* Controller Area Network FilterRegister*/
 typedef struct
 {
@@ -43,7 +52,7 @@ typedef struct
   volatile uint32_t CAN_BTR;                            // CAN bit timing register                  Address offset: 0x1C
   uint32_t CAN_RESERVED0[88];                           // Reserved, 0x020 - 0x17F
   LL_CAN_TxMailBox_TypeDef_t sTxMailBox[3];             // CAN Tx MailBox,                          Address offset: 0x180 - 0x1AC
-  CAN_FIFOMailBox_TypeDef sFIFOMailBox[2];              // CAN FIFO MailBox,                        Address offset: 0x1B0 - 0x1CC
+  LL_CAN_FIFOMailBox_TypeDef_t sFIFOMailBox[2];         // CAN FIFO MailBox,                        Address offset: 0x1B0 - 0x1CC
   uint32_t CAN_RESERVED1[12];                           // Reserved, 0x1D0 - 0x1FF
   volatile uint32_t CAN_FMR;                            // CAN filter master register,              Address offset: 0x200
   volatile uint32_t CAN_FM1R;                           // CAN filter mode register,                Address offset: 0x204
@@ -56,16 +65,6 @@ typedef struct
   uint32_t CAN_RESERVED5[8];                            // Reserved, 0x220-0x23F
   CAN_FilterRegister_TypeDef_t CAN_sFilterRegister[28]; // CAN Filter Register,                     Address offset: 0x240-0x31C
 } CAN_TypeDef_t;
-
-// Data mask position
-#define CAN_TDLR_DATA0_Pos 0
-#define CAN_TDLR_DATA1_Pos 8
-#define CAN_TDLR_DATA2_Pos 16
-#define CAN_TDLR_DATA3_Pos 24
-#define CAN_TDHR_DATA4_Pos 0
-#define CAN_TDHR_DATA5_Pos 8
-#define CAN_TDHR_DATA6_Pos 16
-#define CAN_TDHR_DATA7_Pos 24
 
 /* CAN base address*/
 #define _CAN1_REG_BASE ((CAN_TypeDef_t *)0x40006400UL)
@@ -358,6 +357,38 @@ typedef struct
 #define LEC (4U)
 #define TEC (16U)
 #define REC (24U)
+
+// Bit position of CAN_RIR
+#define STID_rx (21U)
+#define EXID_rx (3U)
+#define IDE_rx (2U)
+#define RTR_rx (1U)
+
+// Bit position of CAN_RDTR
+#define TIME_rx (16U)
+#define FMI_rx (8U)
+#define DLC_rx (0U)
+
+// Data_tx mask position
+#define CAN_TDLR_DATA0_Pos 0
+#define CAN_TDLR_DATA1_Pos 8
+#define CAN_TDLR_DATA2_Pos 16
+#define CAN_TDLR_DATA3_Pos 24
+#define CAN_TDHR_DATA4_Pos 0
+#define CAN_TDHR_DATA5_Pos 8
+#define CAN_TDHR_DATA6_Pos 16
+#define CAN_TDHR_DATA7_Pos 24
+
+// Data_rx mask position
+#define CAN_RDLR_DATA0_Pos 0
+#define CAN_RDLR_DATA1_Pos 8
+#define CAN_RDLR_DATA2_Pos 16
+#define CAN_RDLR_DATA3_Pos 24
+#define CAN_RDHR_DATA4_Pos 0
+#define CAN_RDHR_DATA5_Pos 8
+#define CAN_RDHR_DATA6_Pos 16
+#define CAN_RDHR_DATA7_Pos 24
+
 /**---------------------------------@defgroup-------------------------------------------------**/
 /*@defgroup _CAN_operating_mode */
 #define _CAN_MODE_NORMAL ((0 << SILM) | (0 << LBKM))          /*!< Normal mode   */
@@ -366,8 +397,8 @@ typedef struct
 #define _CAN_MODE_SILENT_LOOPBACK ((1 << SILM) | (1 << LBKM)) /*!< Loopback combined with silent mode   */
 
 /*@defgroup _CAN_identifier_type */
-#define _CAN_ID_STD (0UL) /*!< Standard Id */
-#define _CAN_ID_EXT (1UL) /*!< Extended Id */
+#define _CAN_ID_STD (0U) /*!< Standard Id */
+#define _CAN_ID_EXT (1U) /*!< Extended Id */
 
 /*@defgroup _CAN_remote_transmission_request*/
 #define _CAN_RTR_DATA (0UL)   /*!< Data frame   */
@@ -427,6 +458,18 @@ typedef struct
 #define _CAN_RX_FIFO0 (0U) /*!< CAN receive FIFO 0 */
 #define _CAN_RX_FIFO1 (1U) /*!< CAN receive FIFO 1 */
 
+/** @defgroup _CAN_Interrupts */
+/* Transmit Interrupt */
+#define _CAN_IT_TX_MAILBOX_EMPTY_Pos (1U << 0U) /*!< Transmit mailbox empty interrupt */
+
+/* Receive Interrupts */
+#define _CAN_IT_RX_FIFO0_MSG_PENDING_Pos (1U << 1U) /*!< FIFO 0 message pending interrupt */
+#define _CAN_IT_RX_FIFO0_FULL_Pos (1U << 2U)        /*!< FIFO 0 full interrupt            */
+#define _CAN_IT_RX_FIFO0_OVERRUN_Pos (1U << 3U)     /*!< FIFO 0 overrun interrupt         */
+#define _CAN_IT_RX_FIFO1_MSG_PENDING_Pos (1U << 4U) /*!< FIFO 1 message pending interrupt */
+#define _CAN_IT_RX_FIFO1_FULL_Pos (1U << 5U)        /*!< FIFO 1 full interrupt            */
+#define _CAN_IT_RX_FIFO1_OVERRUN_Pos (1U << 6U)     /*!< FIFO 1 overrun interrupt         */
+
 /**---------------------------------Error Code-------------------------------------------------**/
 
 #define LL_CAN_ERROR_NONE (0x00000000U)            /*!< No error                                             */
@@ -458,10 +501,13 @@ typedef struct
 ErrorStatus LL_CAN_GPIO_Init(LL_CAN_Handler_t *hcan);
 ErrorStatus LL_CAN_Init(LL_CAN_Handler_t *hcan);
 ErrorStatus LL_CAN_ConfigFilter(LL_CAN_Handler_t *hcan, LL_CAN_FilterTypeDef_t *hfilter);
-ErrorStatus LL_CAN_AddTxMessage(LL_CAN_Handler_t *hcan, const uint8_t data[], LL_CAN_TxHeaderTypeDef_t *htxheader, uint32_t TxMailBox);
-ErrorStatus LL_CAN_IsTxMessagePending(LL_CAN_Handler_t *hcan, uint32_t TxMailBox);
+ErrorStatus LL_CAN_AddTxMessage(LL_CAN_Handler_t *hcan, const uint8_t data[], LL_CAN_TxHeaderTypeDef_t *htxheader, uint32_t *TxMailBox);
+ErrorStatus LL_CAN_IsTxMessagePending(LL_CAN_Handler_t *hcan, uint32_t *TxMailBox);
 ErrorStatus LL_CAN_Start(LL_CAN_Handler_t *hcan);
-
+void LL_CAN_ActivateInterrupt(LL_CAN_Handler_t *hcan, uint32_t ActiveITs);
+ErrorStatus LL_CAN_GetRxMessage(LL_CAN_Handler_t *hcan, LL_CAN_RxHeaderTypeDef_t *hrxheader, uint8_t rxdata[], uint32_t RxFifo);
+uint32_t LL_CAN_GetRxFifoFillLevel(LL_CAN_Handler_t *hcan, uint32_t RxFifo);
+void LL_CAN_IRQHandler(LL_CAN_Handler_t *hcan);
 /**---------------------------------Interrupt callback-------------------------------------------------**/
 void LL_CAN_TxMailbox0CompleteCallback(LL_CAN_Handler_t *hcan);
 void LL_CAN_TxMailbox1CompleteCallback(LL_CAN_Handler_t *hcan);
