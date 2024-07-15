@@ -1,4 +1,4 @@
-# CAN LL Library-STM32F4
+# CAN LL Library for STM32F4
 
 ## Define CAN Handler, Filter, and Header
 

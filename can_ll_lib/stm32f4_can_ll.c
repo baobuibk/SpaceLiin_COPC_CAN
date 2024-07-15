@@ -460,7 +460,7 @@ static void Trans(CAN_TypeDef_t *canbase, const uint8_t data[], LL_CAN_TxHeaderT
 	}
 
 	// Set up the DLC
-
+	(canbase->sTxMailBox[transmitmailbox].TDTR) = ((htxheader->_DLC) << DLC);
 	// Set up the Transmit Global Time mode
 	if (htxheader->TransmitGlobalTime == ENABLE)
 	{

@@ -50,9 +50,9 @@ LL_CAN_FilterTypeDef_t hfilter1;
 LL_CAN_TxHeaderTypeDef_t Txheader;
 LL_CAN_RxHeaderTypeDef_t Rxheader;
 uint8_t data[8] = {0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80};
-uint8_t data1[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+uint8_t data1[8] = {11, 12, 13, 14, 15, 11, 12, 13};
 uint8_t rxdata[8];
-char msg[50];
+char msg[70];
 
 uint32_t TxMailBox;
 /* USER CODE END PV */
@@ -132,7 +132,7 @@ int main(void)
   hcan1.Init.SyncJumpWidth = _CAN_SJW_1TQ;
   hcan1.Init.TimeSeg1 = _CAN_BS1_10TQ;
   hcan1.Init.TimeSeg2 = _CAN_BS2_1TQ;
-  hcan1.Init.Mode = _LOOPBACK_MODE;
+  hcan1.Init.Mode = _NORMAL_MODE;
   hcan1.Init.status.AutoBusOff = DISABLE;
   hcan1.Init.status.AutoRetransmission = ENABLE;
   hcan1.Init.status.AutoWakeUp = DISABLE;
@@ -179,13 +179,14 @@ int main(void)
   }
 
   Txheader.StdId = 135;
-  Txheader._DLC = 4;
+  Txheader._DLC = 6;
   Txheader._RTR = _CAN_RTR_DATA;
   Txheader._IDE = _CAN_ID_STD;
   Txheader.TransmitGlobalTime = DISABLE;
 
   /* USER CODE END 2 */
 
+  Can_Tx();
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -194,9 +195,9 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-    Can_Tx();
 
-    Anti_WDG();
+
+//    Anti_WDG();
   }
   /* USER CODE END 3 */
 }
@@ -377,14 +378,19 @@ void LL_CAN_RxFifo0MsgPendingCallback(LL_CAN_Handler_t *hcan)
   }
   else
   {
-    sprintf(msg, "\n");
-    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
-    for (int i = 0; i < Rxheader._DLC; i++)
-    {
-      HAL_UART_Transmit(&huart2, &rxdata[i], 1, 1000);
-    }
-    sprintf(msg, "Receive Successfully\n");
-    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
+	  if (LL_CAN_AddTxMessage(&hcan1, rxdata, &Txheader, &TxMailBox) == ERROR)
+	  {
+	    sprintf(msg, "Receive and Transmit Successfully\n");
+	    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
+	  }
+//    sprintf(msg, "\n");
+//    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
+//    for (int i = 0; i < Rxheader._DLC; i++)
+//    {
+//      HAL_UART_Transmit(&huart2, &rxdata[i], 1, 1000);
+//    }
+//    sprintf(msg, "Receive Successfully\n");
+//    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
     LL_GPIO_TogglePin(GPIOC, LL_GPIO_PIN_5);
   }
 }
