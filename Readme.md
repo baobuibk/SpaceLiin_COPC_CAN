@@ -1,6 +1,6 @@
 # CAN LL Library-STM32F4
 
-## Define can handler, filter and header
+## Define CAN Handler, Filter, and Header
 
 ```
     LL_CAN_Handler_t hcan;
@@ -9,7 +9,7 @@
     LL_CAN_RxHeaderTypeDef_t Rxheader;
 ```
 > [!IMPORTANT]
-> Define can instance first
+> Define the CAN instance first:
 
 ```
     hcan.Instance = _CAN1 
@@ -21,15 +21,15 @@ or
     hcan.Instance = _CAN2
 ```
 
-## Can initialization
+## CAN Initialization
 
-***1. GPIO initialization***
+***1. GPIO Initialization***
 
 ```
     LL_CAN_GPIO_Init(&hcan);
 ```
 
-**2. Enable IRQ**
+***2. Enable IRQ***
 
 Example:
 
@@ -38,7 +38,7 @@ Example:
     NVIC_EnableIRQ(CAN1_TX_IRQn);
 ```
 
-***3. Enable interruption flag***
+***3. Enable Interrupt Flags***
 
 Example:
 
@@ -46,7 +46,7 @@ Example:
     LL_CAN_ActivateInterrupt(&hcan, _CAN_IT_RX_FIFO0_MSG_PENDING_Pos | _CAN_IT_TX_MAILBOX_EMPTY_Pos);
 ```
 
-***4. Can parameters initialization (baudrate,mode, status)***
+***4. Initialize CAN Parameters (Baudrate, Mode, Status)***
 
 ```
     hcan.Init.Prescaler = 2;
@@ -63,7 +63,7 @@ Example:
 
     LL_CAN_Init(&hcan);
 ```
-***5. Can filter configuration***
+***5. Configure CAN Filter***
 
 ```
     hfilter1.FilterActivation = _CAN_FILTER_ENABLE;
@@ -80,15 +80,18 @@ Example:
 ```
 
 > [!IMPORTANT]
-> Enable filter or you can`t use reception mode.
+> Enable the filter to use reception mode.
 
 ## Can start
+
+> [!IMPORTANT]
+> Call the CAN start function after all initializations to ensure proper protocol execution.
 
 ```
     LL_CAN_Start(&hcan);
 ```
 
-## Can transmit and receive functions
+## CAN Transmit and Receive Functions
 
 ***1. Transmission***
 
@@ -98,7 +101,7 @@ Example:
     LL_CAN_IsTxMessagePending(LL_CAN_Handler_t *hcan, uint32_t *TxMailBox);
 ```
 > [!NOTE]   
-> If you use intterupt, just invoke the second line.
+> If using interrupt, call only the second function.
 
 ***2. Reception***
 
@@ -109,4 +112,4 @@ Example:
 ```
 
 > [!NOTE]  
-> If you use intterupt, just invoke the second line.
+> If using interrupt, call only the second function.
