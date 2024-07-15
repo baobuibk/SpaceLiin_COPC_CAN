@@ -72,15 +72,7 @@ ErrorStatus LL_CAN_GPIO_Init(LL_CAN_Handler_t *hcan)
 
 	else
 		status = ERROR;
-	  HAL_NVIC_SetPriority(CAN1_TX_IRQn, 15, 0);
-	  HAL_NVIC_SetPriority(CAN1_RX0_IRQn, 15, 0);
-	  HAL_NVIC_SetPriority(CAN1_RX1_IRQn, 15, 0);
-	  HAL_NVIC_SetPriority(CAN1_SCE_IRQn, 15, 0);
 
-	  HAL_NVIC_EnableIRQ(CAN1_TX_IRQn);
-	  HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
-	  HAL_NVIC_EnableIRQ(CAN1_RX1_IRQn);
-	  HAL_NVIC_EnableIRQ(CAN1_SCE_IRQn);
 	return status;
 }
 
@@ -214,6 +206,18 @@ ErrorStatus LL_CAN_Init(LL_CAN_Handler_t *hcan)
 	return status;
 }
 
+/**
+ * The function LL_CAN_ConfigFilter configures CAN filter settings based on the provided parameters.
+ *
+ * @param hcan The `hcan` parameter is a pointer to a structure `LL_CAN_Handler_t` which contains
+ * information about the CAN handler, including the CAN instance (`Instance`) which can be either
+ * `_CAN1` or `_CAN2`.
+ * @param hfilter - FilterActivation: Indicates whether the filter is enabled or disabled.
+ *
+ * @return The function `ErrorStatus LL_CAN_ConfigFilter(LL_CAN_Handler_t *hcan, LL_CAN_FilterTypeDef_t
+ * *hfilter)` is returning the status of the configuration process, which is either `SUCCESS` or
+ * `ERROR`.
+ */
 ErrorStatus LL_CAN_ConfigFilter(LL_CAN_Handler_t *hcan, LL_CAN_FilterTypeDef_t *hfilter)
 {
 	ErrorStatus status = ERROR;
@@ -256,9 +260,7 @@ ErrorStatus LL_CAN_ConfigFilter(LL_CAN_Handler_t *hcan, LL_CAN_FilterTypeDef_t *
 	// Convert filter bank number into bit position
 	filter_bank_pos = (1U << ((hfilter->FilterBank) & 0x1FU));
 
-
-
-	//Filter deactivation
+	// Filter deactivation
 	(canbase->CAN_FA1R) &= ~(filter_bank_pos);
 
 	// Config filter scale
@@ -266,14 +268,14 @@ ErrorStatus LL_CAN_ConfigFilter(LL_CAN_Handler_t *hcan, LL_CAN_FilterTypeDef_t *
 	{
 		(canbase->CAN_FS1R) &= ~(filter_bank_pos);
 
-		//First 16-bit identifier and First 16-bit mask
-	    //Or First 16-bit identifier and Second 16-bit identifier
+		// First 16-bit identifier and First 16-bit mask
+		// Or First 16-bit identifier and Second 16-bit identifier
 		(canbase->CAN_sFilterRegister[hfilter->FilterBank].FR1) =
 			((0x0000FFFFU & (uint32_t)hfilter->FilterMaskIdLow) << 16U) |
 			(0x0000FFFFU & (uint32_t)hfilter->FilterIdLow);
 
-		//Second 16-bit identifier and Second 16-bit mask */
-	     // Or Third 16-bit identifier and Fourth 16-bit identifier */
+		// Second 16-bit identifier and Second 16-bit mask */
+		//  Or Third 16-bit identifier and Fourth 16-bit identifier */
 		(canbase->CAN_sFilterRegister[hfilter->FilterBank].FR2) =
 			((0x0000FFFFU & (uint32_t)hfilter->FilterMaskIdHigh) << 16U) |
 			(0x0000FFFFU & (uint32_t)hfilter->FilterIdHigh);
@@ -294,14 +296,14 @@ ErrorStatus LL_CAN_ConfigFilter(LL_CAN_Handler_t *hcan, LL_CAN_FilterTypeDef_t *
 	}
 
 	// Config filter mode
-		if (hfilter->FilterMode == _CAN_FILTERMODE_IDMASK)
-		{
-			(canbase->CAN_FM1R) &= ~(filter_bank_pos);
-		}
-		else
-		{
-			(canbase->CAN_FM1R) |= (filter_bank_pos);
-		}
+	if (hfilter->FilterMode == _CAN_FILTERMODE_IDMASK)
+	{
+		(canbase->CAN_FM1R) &= ~(filter_bank_pos);
+	}
+	else
+	{
+		(canbase->CAN_FM1R) |= (filter_bank_pos);
+	}
 	// Config filter FIFO assignment (FIFO0 or FIFO1)
 	if (hfilter->FilterFIFOAssignment == _CAN_FILTER_FIFO0)
 	{
@@ -322,11 +324,22 @@ ErrorStatus LL_CAN_ConfigFilter(LL_CAN_Handler_t *hcan, LL_CAN_FilterTypeDef_t *
 		(canbase->CAN_FA1R) &= ~(filter_bank_pos);
 	}
 
-	//Leave the initialisation mode for the filter
+	// Leave the initialisation mode for the filter
 	(canbase->CAN_FMR) &= ~(1U << FINIT);
 	return status;
 }
 
+/**
+ * The function LL_CAN_Start initializes and starts a CAN bus communication interface.
+ *
+ * @param hcan The `hcan` parameter is a pointer to a structure of type `LL_CAN_Handler_t`, which
+ * likely contains information about the CAN (Controller Area Network) handler or controller being used
+ * in the code. The function `LL_CAN_Start` is responsible for starting the CAN communication and
+ * configuring the controller.
+ *
+ * @return The function LL_CAN_Start is returning an ErrorStatus enum value, which can be either
+ * SUCCESS or ERROR.
+ */
 ErrorStatus LL_CAN_Start(LL_CAN_Handler_t *hcan)
 {
 	ErrorStatus status = ERROR;
@@ -357,6 +370,21 @@ ErrorStatus LL_CAN_Start(LL_CAN_Handler_t *hcan)
 	return status;
 }
 
+/**
+ * The function `LL_CAN_AddTxMessage` adds a transmit message to a CAN bus and checks if any mailbox is
+ * empty for transmission.
+ *
+ * @param hcan `hcan` is a pointer to a structure `LL_CAN_Handler_t` which likely contains information
+ * about the CAN controller and its configuration.
+ * @param data An array of uint8_t data to be transmitted via CAN bus.
+ * @param htxheader - _DLC: Data Length Code
+ * @param TxMailBox The `TxMailBox` parameter in the `LL_CAN_AddTxMessage` function is a pointer to a
+ * `uint32_t` variable that will be used to store the mailbox number where the transmitted message is
+ * placed. This variable will be updated by the function `Trans` which is called if there
+ *
+ * @return The function `ErrorStatus LL_CAN_AddTxMessage` is returning the status of the operation,
+ * which can be either `SUCCESS` or `ERROR`.
+ */
 ErrorStatus LL_CAN_AddTxMessage(LL_CAN_Handler_t *hcan, const uint8_t data[], LL_CAN_TxHeaderTypeDef_t *htxheader, uint32_t *TxMailBox)
 {
 	ErrorStatus status = ERROR;
@@ -396,6 +424,23 @@ ErrorStatus LL_CAN_AddTxMessage(LL_CAN_Handler_t *hcan, const uint8_t data[], LL
 	return status;
 }
 
+/**
+ * The function `Trans` sets up and transmits a CAN message using the provided data and header
+ * information.
+ *
+ * @param canbase The `canbase` parameter in the `Trans` function is a pointer to a structure of type
+ * `CAN_TypeDef_t`, which likely represents a CAN (Controller Area Network) peripheral in a
+ * microcontroller or embedded system. This structure would contain registers and configurations
+ * related to the CAN module, allowing you to
+ * @param data The `data` parameter in the `Trans` function is an array of uint8_t type, which
+ * represents the data to be transmitted over the CAN bus. The array contains 8 elements, with index 0
+ * to 7, where each element holds a byte of data to be sent.
+ * @param htxheader The `htxheader` parameter is a pointer to a structure of type
+ * `LL_CAN_TxHeaderTypeDef_t`. This structure likely contains information related to the CAN message
+ * transmission, such as the message ID, data length, RTR bit, IDE bit, Transmit Global Time flag, etc.
+ * @param TxMailBox The `TxMailBox` parameter is a pointer to a `uint32_t` variable where the function
+ * will store the selected transmit mailbox for sending the CAN message.
+ */
 static void Trans(CAN_TypeDef_t *canbase, const uint8_t data[], LL_CAN_TxHeaderTypeDef_t *htxheader, uint32_t *TxMailBox)
 {
 
@@ -426,11 +471,23 @@ static void Trans(CAN_TypeDef_t *canbase, const uint8_t data[], LL_CAN_TxHeaderT
 	(canbase->sTxMailBox[transmitmailbox].TDHR) = (((uint32_t)data[7] << CAN_TDHR_DATA7_Pos) | ((uint32_t)data[6] << CAN_TDHR_DATA6_Pos) | ((uint32_t)data[5] << CAN_TDHR_DATA5_Pos) | ((uint32_t)data[4] << CAN_TDHR_DATA4_Pos));
 	(canbase->sTxMailBox[transmitmailbox].TDLR) = ((uint32_t)(data[3] << CAN_TDLR_DATA3_Pos) | ((uint32_t)data[2] << CAN_TDLR_DATA2_Pos) | ((uint32_t)data[1] << CAN_TDLR_DATA1_Pos) | ((uint32_t)data[0] << CAN_TDLR_DATA0_Pos));
 
-
 	// Request transmission by enable bit TXRQ
 	(canbase->sTxMailBox[transmitmailbox].TIR) |= (1UL << TXRQ);
-
 }
+
+/**
+ * The function checks if there is a pending transmission request on a specific Tx mailbox of a CAN
+ * controller.
+ *
+ * @param hcan The `hcan` parameter is a pointer to a structure `LL_CAN_Handler_t` which likely
+ * contains information about the CAN controller being used, such as the instance (CAN1 or CAN2).
+ * @param TxMailBox The `TxMailBox` parameter in the `ErrorStatus LL_CAN_IsTxMessagePending` function
+ * represents the mailbox number of the CAN controller where the transmission message is pending. It is
+ * used to check if there is a pending transmission request on the selected Tx mailbox specified by the
+ * user.
+ *
+ * @return an ErrorStatus value, which can be either ERROR or SUCCESS.
+ */
 ErrorStatus LL_CAN_IsTxMessagePending(LL_CAN_Handler_t *hcan, uint32_t *TxMailBox)
 {
 	ErrorStatus status = ERROR;
@@ -451,6 +508,19 @@ ErrorStatus LL_CAN_IsTxMessagePending(LL_CAN_Handler_t *hcan, uint32_t *TxMailBo
 	return status;
 }
 
+/**
+ * The function `LL_CAN_GetRxFifoFillLevel` retrieves the fill level of a specified receive FIFO in a
+ * CAN peripheral.
+ *
+ * @param hcan The `hcan` parameter is a pointer to a structure `LL_CAN_Handler_t` which likely
+ * contains information about the CAN handler, such as the CAN instance (CAN1 or CAN2).
+ * @param RxFifo RxFifo is the receive FIFO (First In First Out) buffer in a CAN (Controller Area
+ * Network) controller. In this function, it is used to specify which receive FIFO buffer to check for
+ * fill level - either FIFO0 or FIFO1.
+ *
+ * @return The function `LL_CAN_GetRxFifoFillLevel` returns the fill level of the specified receive
+ * FIFO (RxFifo) for the given CAN handler (hcan).
+ */
 uint32_t LL_CAN_GetRxFifoFillLevel(LL_CAN_Handler_t *hcan, uint32_t RxFifo)
 {
 	uint32_t filllevel = 0U;
@@ -476,6 +546,26 @@ uint32_t LL_CAN_GetRxFifoFillLevel(LL_CAN_Handler_t *hcan, uint32_t RxFifo)
 	return filllevel;
 }
 
+/**
+ * The function `LL_CAN_GetRxMessage` retrieves a received CAN message from the specified CAN hardware
+ * instance and populates the header and data into the provided structures.
+ *
+ * @param hcan The `hcan` parameter is a pointer to a structure `LL_CAN_Handler_t` which contains
+ * information about the CAN controller instance being used.
+ * @param hrxheader The `hrxheader` parameter is a pointer to a structure of type
+ * `LL_CAN_RxHeaderTypeDef_t`. This structure likely contains fields to store information about the
+ * received CAN message, such as the ID, DLC, RTR, Filter Match Index, Timestamp, etc. The function
+ * `Error
+ * @param rxdata The `rxdata` parameter is an array where the received CAN message data will be stored.
+ * It is expected to be a valid memory location where the data can be written to by the function.
+ * @param RxFifo The `RxFifo` parameter in the provided function `ErrorStatus LL_CAN_GetRxMessage` is
+ * used to specify which Receive FIFO (0 or 1) to read the message from. It is an input parameter that
+ * determines from which FIFO the message should be retrieved.
+ *
+ * @return either SUCCESS or ERROR based on the conditions checked within the function. If the Rx FIFO
+ * is empty or if there is a parameter error, the function will return ERROR. Otherwise, it will return
+ * SUCCESS after successfully retrieving the CAN message data.
+ */
 ErrorStatus LL_CAN_GetRxMessage(LL_CAN_Handler_t *hcan, LL_CAN_RxHeaderTypeDef_t *hrxheader, uint8_t rxdata[], uint32_t RxFifo)
 {
 	// Check the parameters
@@ -519,11 +609,11 @@ ErrorStatus LL_CAN_GetRxMessage(LL_CAN_Handler_t *hcan, LL_CAN_RxHeaderTypeDef_t
 	hrxheader->_IDE = (((1U << IDE_rx) & (canbase->sFIFOMailBox[RxFifo].RIR)) >> IDE_rx);
 	if (hrxheader->_IDE == _CAN_ID_STD)
 	{
-		hrxheader->StdId = ((((0x7FF << STID_rx) & (canbase->sFIFOMailBox[RxFifo].RIR))) >> STID_rx);
+		hrxheader->StdId = (((0x7FF << STID_rx) & (canbase->sFIFOMailBox[RxFifo].RIR)) >> STID_rx);
 	}
 	else
 	{
-		hrxheader->ExtId = ((((0x1FFFFFFF << EXID_rx) & (canbase->sFIFOMailBox[RxFifo].RIR))) >> EXID);
+		hrxheader->ExtId = (((0x1FFFFFFF << EXID_rx) & (canbase->sFIFOMailBox[RxFifo].RIR)) >> EXID);
 	}
 
 	// Get Remote transmission request
@@ -542,29 +632,40 @@ ErrorStatus LL_CAN_GetRxMessage(LL_CAN_Handler_t *hcan, LL_CAN_RxHeaderTypeDef_t
 	hrxheader->Timestamp = (((0xFFFF << TIME_rx) & (canbase->sFIFOMailBox[RxFifo].RDTR)) >> TIME_rx);
 
 	/* Get the data */
-	rxdata[0] = (uint8_t)((0XFF << CAN_RDLR_DATA0_Pos) & canbase->sFIFOMailBox[RxFifo].RDLR) >> CAN_RDLR_DATA0_Pos;
-	rxdata[1] = (uint8_t)((0XFF << CAN_RDLR_DATA1_Pos) & canbase->sFIFOMailBox[RxFifo].RDLR) >> CAN_RDLR_DATA1_Pos;
-	rxdata[2] = (uint8_t)((0XFF << CAN_RDLR_DATA2_Pos) & canbase->sFIFOMailBox[RxFifo].RDLR) >> CAN_RDLR_DATA2_Pos;
-	rxdata[3] = (uint8_t)((0XFF << CAN_RDLR_DATA3_Pos) & canbase->sFIFOMailBox[RxFifo].RDLR) >> CAN_RDLR_DATA3_Pos;
-	rxdata[4] = (uint8_t)((0XFF << CAN_RDHR_DATA4_Pos) & canbase->sFIFOMailBox[RxFifo].RDHR) >> CAN_RDHR_DATA4_Pos;
-	rxdata[5] = (uint8_t)((0XFF << CAN_RDHR_DATA5_Pos) & canbase->sFIFOMailBox[RxFifo].RDHR) >> CAN_RDHR_DATA5_Pos;
-	rxdata[6] = (uint8_t)((0XFF << CAN_RDHR_DATA6_Pos) & canbase->sFIFOMailBox[RxFifo].RDHR) >> CAN_RDHR_DATA6_Pos;
-	rxdata[7] = (uint8_t)((0XFF << CAN_RDHR_DATA7_Pos) & canbase->sFIFOMailBox[RxFifo].RDHR) >> CAN_RDHR_DATA7_Pos;
+	rxdata[0] = (uint8_t)(((0XFF << CAN_RDLR_DATA0_Pos) & (canbase->sFIFOMailBox[RxFifo].RDLR)) >> CAN_RDLR_DATA0_Pos);
+	rxdata[1] = (uint8_t)(((0XFF << CAN_RDLR_DATA1_Pos) & (canbase->sFIFOMailBox[RxFifo].RDLR)) >> CAN_RDLR_DATA1_Pos);
+	rxdata[2] = (uint8_t)(((0XFF << CAN_RDLR_DATA2_Pos) & (canbase->sFIFOMailBox[RxFifo].RDLR)) >> CAN_RDLR_DATA2_Pos);
+	rxdata[3] = (uint8_t)(((0XFF << CAN_RDLR_DATA3_Pos) & (canbase->sFIFOMailBox[RxFifo].RDLR)) >> CAN_RDLR_DATA3_Pos);
+	rxdata[4] = (uint8_t)(((0XFF << CAN_RDHR_DATA4_Pos) & (canbase->sFIFOMailBox[RxFifo].RDHR)) >> CAN_RDHR_DATA4_Pos);
+	rxdata[5] = (uint8_t)(((0XFF << CAN_RDHR_DATA5_Pos) & (canbase->sFIFOMailBox[RxFifo].RDHR)) >> CAN_RDHR_DATA5_Pos);
+	rxdata[6] = (uint8_t)(((0XFF << CAN_RDHR_DATA6_Pos) & (canbase->sFIFOMailBox[RxFifo].RDHR)) >> CAN_RDHR_DATA6_Pos);
+	rxdata[7] = (uint8_t)(((0XFF << CAN_RDHR_DATA7_Pos) & (canbase->sFIFOMailBox[RxFifo].RDHR)) >> CAN_RDHR_DATA7_Pos);
 
 	/* Release the FIFO */
 	if (RxFifo == _CAN_RX_FIFO0) /* Rx element is assigned to Rx FIFO 0 */
 	{
 		/* Release RX FIFO 0 */
-		canbase->CAN_RF0R |= (1U << RFOM0);
+		(canbase->CAN_RF0R) |= (1U << RFOM0);
 	}
 	else /* Rx element is assigned to Rx FIFO 1 */
 	{
 		/* Release RX FIFO 1 */
-		canbase->CAN_RF1R |= (1U << RFOM1);
+		(canbase->CAN_RF1R) |= (1U << RFOM1);
 	}
 
 	return SUCCESS;
 }
+/**
+ * The function LL_CAN_ActivateInterrupt activates selected interrupts for a CAN handler based on the
+ * specified ActiveITs.
+ *
+ * @param hcan The `hcan` parameter is a pointer to a structure of type `LL_CAN_Handler_t`, which
+ * likely contains information and configurations related to a CAN (Controller Area Network) peripheral
+ * in a microcontroller.
+ * @param ActiveITs The `ActiveITs` parameter in the `LL_CAN_ActivateInterrupt` function is used to
+ * specify which interrupts should be enabled. It is a bitmask where each bit corresponds to a specific
+ * interrupt source. By ORing the `ActiveITs` bitmask with the `CAN_IER` register,
+ */
 
 void LL_CAN_ActivateInterrupt(LL_CAN_Handler_t *hcan, uint32_t ActiveITs)
 {
@@ -579,25 +680,26 @@ void LL_CAN_ActivateInterrupt(LL_CAN_Handler_t *hcan, uint32_t ActiveITs)
 	/* Enable the selected interrupts */
 	(canbase->CAN_IER) |= (ActiveITs);
 }
+
 /*
   ==============================================================================
 						  ##### Callback functions #####
   ==============================================================================
 	[..]
 	This subsection provides the following callback functions:
-	  (+) HAL_CAN_TxMailbox0CompleteCallback
-	  (+) HAL_CAN_TxMailbox1CompleteCallback
-	  (+) HAL_CAN_TxMailbox2CompleteCallback
-	  (+) HAL_CAN_TxMailbox0AbortCallback
-	  (+) HAL_CAN_TxMailbox1AbortCallback
-	  (+) HAL_CAN_TxMailbox2AbortCallback
-	  (+) HAL_CAN_RxFifo0MsgPendingCallback
-	  (+) HAL_CAN_RxFifo0FullCallback
-	  (+) HAL_CAN_RxFifo1MsgPendingCallback
-	  (+) HAL_CAN_RxFifo1FullCallback
-	  (+) HAL_CAN_SleepCallback
-	  (+) HAL_CAN_WakeUpFromRxMsgCallback
-	  (+) HAL_CAN_ErrorCallback
+	  (+) LL_CAN_TxMailbox0CompleteCallback
+	  (+) LL_CAN_TxMailbox1CompleteCallback
+	  (+) LL_CAN_TxMailbox2CompleteCallback
+	  (+) LL_CAN_TxMailbox0AbortCallback
+	  (+) LL_CAN_TxMailbox1AbortCallback
+	  (+) LL_CAN_TxMailbox2AbortCallback
+	  (+) LL_CAN_RxFifo0MsgPendingCallback
+	  (+) LL_CAN_RxFifo0FullCallback
+	  (+) LL_CAN_RxFifo1MsgPendingCallback
+	  (+) LL_CAN_RxFifo1FullCallback
+	  (+) LL_CAN_SleepCallback
+	  (+) LL_CAN_WakeUpFromRxMsgCallback
+	  (+) LL_CAN_ErrorCallback
 */
 
 /**
