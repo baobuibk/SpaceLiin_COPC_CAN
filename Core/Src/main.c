@@ -383,14 +383,15 @@ void LL_CAN_RxFifo0MsgPendingCallback(LL_CAN_Handler_t *hcan)
 	    sprintf(msg, "Receive and Transmit Successfully\n");
 	    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
 	  }
-//    sprintf(msg, "\n");
+    sprintf(msg, "string\n");
 //    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
-//    for (int i = 0; i < Rxheader._DLC; i++)
-//    {
-//      HAL_UART_Transmit(&huart2, &rxdata[i], 1, 1000);
-//    }
-//    sprintf(msg, "Receive Successfully\n");
-//    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
+    for (int i = 0; i < Rxheader._DLC; i++)
+    {
+    	HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
+//    	HAL_UART_Transmit(&huart2, (uint8_t *)rxdata, 8, 1000);
+    }
+    sprintf(msg, "Receive Successfully\n");
+    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 1000);
     LL_GPIO_TogglePin(GPIOC, LL_GPIO_PIN_5);
   }
 }
